@@ -66,7 +66,7 @@ export function SystemLayout({ children }: SystemLayoutProps) {
   const allItems = [
     ...appItems,
     { name: "App Marketplace", href: "/marketplace", icon: Package, minRole: undefined as UserRole | undefined },
-    { name: "Admin Control", href: "/settings", icon: Settings, minRole: "manager" as UserRole | undefined },
+    { name: "Admin Control", href: "/settings", icon: Settings, minRole: "system_admin" as UserRole | undefined },
   ].filter(item => !item.minRole || hasMinimumRole(item.minRole))
 
   const sidebarGroups = [

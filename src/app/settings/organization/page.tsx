@@ -249,7 +249,7 @@ function OrganizationSettingsContent() {
 
 export default function OrganizationSettings() {
     return (
-        <AuthGuard requiredRole="manager">
+        <AuthGuard requiredRole="system_admin">
             <OrganizationSettingsContent />
         </AuthGuard>
     )

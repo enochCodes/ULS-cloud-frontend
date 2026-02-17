@@ -1,4 +1,4 @@
-export type CustomerStatus = "lead" | "customer"
+export type CustomerStatus = "lead" | "customer" | "inactive"
 
 export interface Customer {
     id: number
