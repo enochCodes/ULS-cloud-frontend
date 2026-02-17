@@ -62,16 +62,12 @@ export function SystemLayout({ children }: SystemLayoutProps) {
   const activeAppSlugs = org?.apps?.filter((s) => APP_SLUG_MAP[s]) ?? ["crm"]
   const appItems = activeAppSlugs.map((slug) => APP_SLUG_MAP[slug]).filter(Boolean)
   
-  // Only show settings if user has at least manager role
-  const settingsItem = hasMinimumRole("manager") 
-    ? [{ name: "Admin Control", href: "/settings", icon: Settings, minRole: "manager" as UserRole }]
-    : []
-  
+  // Build navigation items with role-based filtering
   const allItems = [
     ...appItems,
-    { name: "App Marketplace", href: "/marketplace", icon: Package },
-    ...settingsItem,
-  ]
+    { name: "App Marketplace", href: "/marketplace", icon: Package, minRole: undefined as UserRole | undefined },
+    { name: "Admin Control", href: "/settings", icon: Settings, minRole: "manager" as UserRole | undefined },
+  ].filter(item => !item.minRole || hasMinimumRole(item.minRole))
 
   const sidebarGroups = [
     { title: "Main Hub", items: [{ name: "Overview", href: "/dashboard", icon: LayoutGrid }] },

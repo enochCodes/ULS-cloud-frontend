@@ -32,8 +32,14 @@ function parseJWT(token: string): { exp?: number; role?: string } | null {
         const parts = token.split(".");
         if (parts.length !== 3) return null;
         const payload = parts[1];
-        const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-        return JSON.parse(decoded);
+        // Handle base64url padding - add padding if needed
+        const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=");
+        const decoded = atob(padded);
+        const parsed = JSON.parse(decoded);
+        // Validate expected structure
+        if (typeof parsed !== "object" || parsed === null) return null;
+        return parsed;
     } catch {
         return null;
     }

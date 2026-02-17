@@ -17,8 +17,14 @@ export function parseJWT(token: string): JWTPayload | null {
         const parts = token.split(".")
         if (parts.length !== 3) return null
         const payload = parts[1]
-        const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"))
-        return JSON.parse(decoded) as JWTPayload
+        // Handle base64url padding - add padding if needed
+        const base64 = payload.replace(/-/g, "+").replace(/_/g, "/")
+        const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, "=")
+        const decoded = atob(padded)
+        const parsed = JSON.parse(decoded)
+        // Validate expected structure
+        if (typeof parsed !== "object" || parsed === null) return null
+        return parsed as JWTPayload
     } catch {
         return null
     }
@@ -37,12 +43,15 @@ function setCookie(name: string, value: string, days: number = 7) {
     const date = new Date()
     date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000)
     const expires = `expires=${date.toUTCString()}`
-    document.cookie = `${name}=${value};${expires};path=/;SameSite=Lax`
+    // Add Secure flag in production (HTTPS)
+    const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? ";Secure" : ""
+    document.cookie = `${name}=${value};${expires};path=/;SameSite=Lax${secure}`
 }
 
 function deleteCookie(name: string) {
     if (typeof document === "undefined") return
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+    const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? ";Secure" : ""
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/${secure}`
 }
 
 export function getToken(): string | null {
