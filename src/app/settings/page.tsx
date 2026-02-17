@@ -249,7 +249,7 @@ function SettingsContent() {
 
 export default function SettingsPage() {
     return (
-        <AuthGuard requiredRole="manager">
+        <AuthGuard requiredRole="system_admin">
             <SettingsContent />
         </AuthGuard>
     )

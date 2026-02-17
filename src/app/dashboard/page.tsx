@@ -15,35 +15,35 @@ import {
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { crmCustomers, crmOrders } from "@/services/api/crm"
-import { adminService, AdminActivity } from "@/services/api/admin"
+import { crmCustomers, crmOrders, crmAudit } from "@/services/api/crm"
 import { ticketingTickets } from "@/services/api/ticketing"
+import { AuditLog } from "@/services/api/types"
 
 export default function DashboardPage() {
     const [customersCount, setCustomersCount] = useState<number | null>(null)
     const [ordersCount, setOrdersCount] = useState<number | null>(null)
     const [ticketsCount, setTicketsCount] = useState<number | null>(null)
-    const [activities, setActivities] = useState<AdminActivity[]>([])
+    const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const load = async () => {
             try {
-                const [customers, orders, tickets, acts] = await Promise.all([
+                const [customers, orders, tickets, logs] = await Promise.all([
                     crmCustomers.list().catch(() => []),
                     crmOrders.list().catch(() => []),
                     ticketingTickets.adminList().catch(() => []),
-                    adminService.getActivities().catch(() => []),
+                    crmAudit.list().catch(() => []),
                 ])
                 setCustomersCount(Array.isArray(customers) ? customers.length : 0)
                 setOrdersCount(Array.isArray(orders) ? orders.length : 0)
                 setTicketsCount(Array.isArray(tickets) ? tickets.length : 0)
-                setActivities(Array.isArray(acts) ? acts : [])
+                setAuditLogs(Array.isArray(logs) ? logs : [])
             } catch {
                 setCustomersCount(0)
                 setOrdersCount(0)
                 setTicketsCount(0)
-                setActivities([])
+                setAuditLogs([])
             } finally {
                 setLoading(false)
             }
@@ -182,17 +182,17 @@ export default function DashboardPage() {
                         <CardDescription>Latest system events from all services.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {activities.length > 0 ? (
+                        {auditLogs.length > 0 ? (
                             <div className="space-y-4">
-                                {activities.slice(0, 8).map((act, i) => (
-                                    <div key={act.id || i} className="flex items-start gap-3">
-                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
-                                            {(act.user || "S").charAt(0).toUpperCase()}
+                                {auditLogs.slice(0, 8).map((log, i) => (
+                                    <div key={log.id || i} className="flex items-start gap-3">
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold shrink-0 uppercase">
+                                            {log.entity_type.slice(0, 3)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">{act.action}</p>
+                                            <p className="text-sm font-medium truncate">{log.action} {log.entity_type}</p>
                                             <p className="text-xs text-muted-foreground">
-                                                {act.user || "System"} &middot; {act.app || "Platform"} &middot; {act.time || ""}
+                                                ID: {log.entity_id} &middot; {log.created_at || ""}
                                             </p>
                                         </div>
                                     </div>

@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation"
 import {
     LayoutDashboard,
     Users,
-    Settings,
     Package,
     MessageSquare,
     Loader2
@@ -14,40 +13,32 @@ import {
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
-import { adminService, AdminApp } from "@/services/api/admin"
+import { organizationService } from "@/services/api/organization"
 
-const iconMap: Record<string, React.ElementType> = {
-    "users": Users,
-    "ticket": MessageSquare,
-    "package": Package,
-    "settings": Settings,
-    "layout": LayoutDashboard
-}
-
-const slugToHref: Record<string, string> = {
-    crm: "/crm",
-    ticketing: "/ticketing",
-    marketplace: "/marketplace",
-    settings: "/settings",
+const APP_CONFIG: Record<string, { name: string; href: string; icon: React.ElementType }> = {
+    crm: { name: "Neuro CRM", href: "/crm", icon: Users },
+    ticketing: { name: "Quantum Support", href: "/ticketing", icon: MessageSquare },
 }
 
 export function DashboardNav() {
     const pathname = usePathname()
-    const [apps, setApps] = React.useState<AdminApp[]>([])
+    const [orgApps, setOrgApps] = React.useState<string[]>([])
     const [isLoading, setIsLoading] = React.useState(true)
 
     React.useEffect(() => {
-        const fetchApps = async () => {
+        const fetchOrg = async () => {
             try {
-                const data = await adminService.getApps()
-                setApps(data.filter((a) => a.available))
+                const orgs = await organizationService.list()
+                if (orgs?.length) {
+                    setOrgApps(orgs[0].apps || [])
+                }
             } catch (err) {
-                console.error("Failed to fetch apps", err)
+                console.error("Failed to fetch organization", err)
             } finally {
                 setIsLoading(false)
             }
         }
-        fetchApps()
+        fetchOrg()
     }, [])
 
     if (isLoading) {
@@ -58,6 +49,10 @@ export function DashboardNav() {
             </div>
         )
     }
+
+    const activeApps = orgApps
+        .filter((slug) => APP_CONFIG[slug])
+        .map((slug) => ({ slug, ...APP_CONFIG[slug] }))
 
     return (
         <nav className="grid items-start gap-2">
@@ -75,17 +70,16 @@ export function DashboardNav() {
                 <span>Overview</span>
             </Link>
 
-            {apps.map((app) => {
-                const Icon = iconMap[app.icon] || Package
-                const href = slugToHref[app.slug] || `/${app.slug}`
+            {activeApps.map((app) => {
+                const Icon = app.icon
 
                 return (
                     <Link
-                        key={app.id}
-                        href={href}
+                        key={app.slug}
+                        href={app.href}
                         className={cn(
                             buttonVariants({ variant: "ghost" }),
-                            pathname.startsWith(href)
+                            pathname.startsWith(app.href)
                                 ? "bg-primary/10 text-primary font-bold shadow-sm"
                                 : "transparent hover:bg-accent hover:text-accent-foreground",
                             "justify-start rounded-xl px-4 py-3"
@@ -96,6 +90,20 @@ export function DashboardNav() {
                     </Link>
                 )
             })}
+
+            <Link
+                href="/marketplace"
+                className={cn(
+                    buttonVariants({ variant: "ghost" }),
+                    pathname.startsWith("/marketplace")
+                        ? "bg-primary/10 text-primary font-bold shadow-sm"
+                        : "transparent hover:bg-accent hover:text-accent-foreground",
+                    "justify-start rounded-xl px-4 py-3"
+                )}
+            >
+                <Package className="mr-3 h-4 w-4" />
+                <span>App Marketplace</span>
+            </Link>
         </nav>
     )
 }

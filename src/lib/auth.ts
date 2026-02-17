@@ -10,7 +10,7 @@ export interface JWTPayload {
     iat?: number
 }
 
-export type UserRole = "admin" | "manager" | "user" | "viewer"
+export type UserRole = "system_admin" | "user"
 
 export function parseJWT(token: string): JWTPayload | null {
     try {
@@ -96,8 +96,8 @@ export function isAuthenticated(): boolean {
 export function getUserRole(): UserRole {
     const payload = getTokenPayload()
     const role = payload?.role?.toLowerCase()
-    if (role === "admin" || role === "manager" || role === "user" || role === "viewer") {
-        return role
+    if (role === "system_admin") {
+        return "system_admin"
     }
     return "user" // Default role
 }
@@ -108,7 +108,7 @@ export function hasRole(requiredRoles: UserRole[]): boolean {
 }
 
 export function hasMinimumRole(minimumRole: UserRole): boolean {
-    const roleHierarchy: UserRole[] = ["viewer", "user", "manager", "admin"]
+    const roleHierarchy: UserRole[] = ["user", "system_admin"]
     const userRole = getUserRole()
     const userRoleIndex = roleHierarchy.indexOf(userRole)
     const minimumRoleIndex = roleHierarchy.indexOf(minimumRole)

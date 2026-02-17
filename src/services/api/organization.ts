@@ -67,7 +67,7 @@ export const subscriptionService = {
     return res?.data as Subscription | undefined
   },
   create: (data: Partial<Subscription>) => coreHttpClient.post<GenericResponse>("/organization/subscriptions", data),
-  update: (data: Partial<Subscription>) => coreHttpClient.put<GenericResponse>("/organization/subscriptions", data),
+  update: (id: number, data: Partial<Subscription>) => coreHttpClient.put<GenericResponse>(`/organization/subscriptions/${id}`, data),
   delete: (id: number) => coreHttpClient.delete<GenericResponse>(`/organization/subscriptions/${id}`),
 }
 

@@ -12,43 +12,48 @@ import {
     Star,
     Search,
     BrainCircuit,
-    LayoutGrid,
     MessageSquare,
-    Shield,
     Loader2,
     Users
 } from "lucide-react"
-import { adminService, AdminApp } from "@/services/api/admin"
-import { organizationService } from "@/services/api/organization"
+import {
+    organizationService,
+    subscriptionService,
+    Subscription,
+} from "@/services/api/organization"
 import type { LucideIcon } from "lucide-react"
 
-const ICON_MAP: Record<string, LucideIcon> = {
-    users: Users,
-    ticket: MessageSquare,
-    package: Package,
-    settings: Shield,
-    brain: BrainCircuit,
-    layout: LayoutGrid,
+interface AppDefinition {
+    slug: string
+    name: string
+    description: string
+    icon: LucideIcon
+    color: string
+    href: string
 }
 
-const COLOR_MAP: Record<string, string> = {
-    crm: "text-indigo-500 bg-indigo-500/10",
-    ticketing: "text-blue-500 bg-blue-500/10",
-    marketplace: "text-purple-500 bg-purple-500/10",
-    inventory: "text-amber-500 bg-amber-500/10",
-    security: "text-emerald-500 bg-emerald-500/10",
-    analytics: "text-purple-500 bg-purple-500/10",
-}
-
-const HREF_MAP: Record<string, string> = {
-    crm: "/crm",
-    ticketing: "/ticketing",
-    marketplace: "/marketplace",
-}
+const AVAILABLE_APPS: AppDefinition[] = [
+    {
+        slug: "crm",
+        name: "Neuro CRM",
+        description: "Manage customers, orders, communications and analytics with an AI-enhanced CRM module.",
+        icon: Users,
+        color: "text-indigo-500 bg-indigo-500/10",
+        href: "/crm",
+    },
+    {
+        slug: "ticketing",
+        name: "Quantum Support",
+        description: "Support ticketing, event management, and subscription plans for your customers.",
+        icon: MessageSquare,
+        color: "text-emerald-500 bg-emerald-500/10",
+        href: "/ticketing",
+    },
+]
 
 export default function MarketplacePage() {
-    const [apps, setApps] = useState<AdminApp[]>([])
     const [orgApps, setOrgApps] = useState<string[]>([])
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
     const [activating, setActivating] = useState<string | null>(null)
@@ -57,17 +62,17 @@ export default function MarketplacePage() {
     useEffect(() => {
         const load = async () => {
             try {
-                const [appList, orgs] = await Promise.all([
-                    adminService.getApps(),
+                const [orgs, subs] = await Promise.all([
                     organizationService.list(),
+                    subscriptionService.list(),
                 ])
-                setApps(appList)
                 if (orgs?.length) {
                     setOrgId(orgs[0].id)
                     setOrgApps(orgs[0].apps || [])
                 }
+                setSubscriptions(Array.isArray(subs) ? subs : [])
             } catch {
-                setApps([])
+                setOrgApps([])
             } finally {
                 setIsLoading(false)
             }
@@ -75,10 +80,31 @@ export default function MarketplacePage() {
         load()
     }, [])
 
-    const filteredApps = apps.filter((app) => {
+    // Merge subscription apps into the available apps list
+    const allApps: AppDefinition[] = [
+        ...AVAILABLE_APPS,
+        // Add any apps from subscriptions that aren't already in AVAILABLE_APPS
+        ...subscriptions
+            .flatMap((sub) => sub.apps || [])
+            .filter((slug, i, arr) => arr.indexOf(slug) === i)
+            .filter((slug) => !AVAILABLE_APPS.some((a) => a.slug === slug))
+            .map((slug) => {
+                const label = slug.charAt(0).toUpperCase() + slug.slice(1)
+                return {
+                    slug,
+                    name: label,
+                    description: `${label} module from your subscription.`,
+                    icon: Package as LucideIcon,
+                    color: "text-slate-500 bg-slate-500/10",
+                    href: `/${slug}`,
+                }
+            }),
+    ]
+
+    const filteredApps = allApps.filter((app) => {
         if (!searchQuery) return true
         const q = searchQuery.toLowerCase()
-        return app.name.toLowerCase().includes(q) || app.description.toLowerCase().includes(q) || app.category?.toLowerCase().includes(q)
+        return app.name.toLowerCase().includes(q) || app.description.toLowerCase().includes(q)
     })
 
     const handleToggleApp = async (slug: string) => {
@@ -96,8 +122,9 @@ export default function MarketplacePage() {
         }
     }
 
-    const getIcon = (app: AdminApp): LucideIcon => {
-        return ICON_MAP[app.icon] || ICON_MAP[app.slug] || BrainCircuit
+    // Check if an app is included in any subscription
+    const isAppInSubscription = (slug: string): boolean => {
+        return subscriptions.some((sub) => sub.apps?.includes(slug))
     }
 
     return (
@@ -118,6 +145,39 @@ export default function MarketplacePage() {
                 </div>
             </div>
 
+            {/* Active Subscriptions */}
+            {subscriptions.length > 0 && (
+                <div className="space-y-4">
+                    <h2 className="text-lg font-bold">Your Subscriptions</h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {subscriptions.map((sub) => (
+                            <Card key={sub.id} className="border-none shadow-sm">
+                                <CardContent className="p-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="font-bold">{sub.name}</h4>
+                                            {sub.description && <p className="text-sm text-muted-foreground mt-1">{sub.description}</p>}
+                                        </div>
+                                        <Badge variant="default" className="text-[10px]">Active</Badge>
+                                    </div>
+                                    <div className="mt-3 flex items-baseline gap-1">
+                                        <span className="text-2xl font-black text-primary">{sub.currency} {sub.price}</span>
+                                        <span className="text-xs text-muted-foreground">/{sub.billing_cycle}</span>
+                                    </div>
+                                    {sub.apps?.length ? (
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                            {sub.apps.map((app) => (
+                                                <Badge key={app} variant="outline" className="text-[10px]">{app}</Badge>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {isLoading ? (
                 <div className="flex justify-center py-24">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -129,16 +189,15 @@ export default function MarketplacePage() {
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {filteredApps.map((app) => {
-                        const Icon = getIcon(app)
-                        const color = COLOR_MAP[app.slug] || "text-slate-500 bg-slate-500/10"
+                        const Icon = app.icon
                         const isActivated = orgApps.includes(app.slug)
-                        const href = HREF_MAP[app.slug] || "#"
+                        const available = isAppInSubscription(app.slug) || AVAILABLE_APPS.some((a) => a.slug === app.slug)
 
                         return (
-                            <Card key={app.id} className="border-none shadow-md hover:shadow-xl transition-all hover:-translate-y-1 duration-300 flex flex-col overflow-hidden group">
-                                <div className={`h-2 w-full ${app.available ? 'bg-primary' : 'bg-muted'}`} />
+                            <Card key={app.slug} className="border-none shadow-md hover:shadow-xl transition-all hover:-translate-y-1 duration-300 flex flex-col overflow-hidden group">
+                                <div className={`h-2 w-full ${available ? 'bg-primary' : 'bg-muted'}`} />
                                 <CardHeader className="flex flex-row items-start justify-between pb-2 space-y-0">
-                                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${color} group-hover:scale-110 transition-transform`}>
+                                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center ${app.color} group-hover:scale-110 transition-transform`}>
                                         <Icon className="h-7 w-7" />
                                     </div>
                                     <div className="flex gap-2">
@@ -147,8 +206,8 @@ export default function MarketplacePage() {
                                                 <CheckCircle className="h-3 w-3 mr-1" /> Active
                                             </Badge>
                                         )}
-                                        <Badge variant={app.available ? "default" : "secondary"} className="uppercase tracking-widest text-[10px] font-bold">
-                                            {app.available ? "Available" : "Coming Soon"}
+                                        <Badge variant={available ? "default" : "secondary"} className="uppercase tracking-widest text-[10px] font-bold">
+                                            {available ? "Available" : "Coming Soon"}
                                         </Badge>
                                     </div>
                                 </CardHeader>
@@ -157,16 +216,13 @@ export default function MarketplacePage() {
                                         <h3 className="text-xl font-bold mb-1">{app.name}</h3>
                                         <p className="text-sm text-muted-foreground line-clamp-2">{app.description}</p>
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        <Badge variant="outline" className="text-[10px]">{app.category}</Badge>
-                                    </div>
                                 </CardContent>
                                 <CardFooter className="pt-0 gap-2">
-                                    {app.available && isActivated && href !== "#" ? (
-                                        <Link href={href} className="flex-1">
+                                    {available && isActivated && app.href !== "#" ? (
+                                        <Link href={app.href} className="flex-1">
                                             <Button className="w-full" variant="outline">Open Module</Button>
                                         </Link>
-                                    ) : app.available ? (
+                                    ) : available ? (
                                         <Button
                                             className="w-full"
                                             variant={isActivated ? "outline" : "default"}

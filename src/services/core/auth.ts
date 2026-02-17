@@ -27,7 +27,7 @@ interface SSOResponse<T = unknown> {
 
 export const authService = {
     login: async (payload: LoginPayload): Promise<string> => {
-        const res = await coreHttpClient.post<SSOResponse<string>>("/auth/login", payload)
+        const res = await coreHttpClient.post<SSOResponse<string>>("/sso/login", payload)
         if (!res.success || !res.data) {
             throw new Error(res.message || "Login failed")
         }
@@ -35,7 +35,7 @@ export const authService = {
     },
 
     register: async (payload: RegisterPayload): Promise<SSOResponse> => {
-        const res = await coreHttpClient.post<SSOResponse>("/auth/register", payload)
+        const res = await coreHttpClient.post<SSOResponse>("/sso/register", payload)
         if (!res.success) {
             throw new Error(res.message || "Registration failed")
         }
