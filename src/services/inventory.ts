@@ -21,7 +21,7 @@ export interface CreateInventoryItemPayload {
     location?: string
 }
 
-export interface UpdateInventoryItemPayload extends Partial<CreateInventoryItemPayload> {}
+export type UpdateInventoryItemPayload = Partial<CreateInventoryItemPayload>
 
 export const inventoryService = {
     list: () => crmHttpClient.get<InventoryItem[]>("/inventory/items"),

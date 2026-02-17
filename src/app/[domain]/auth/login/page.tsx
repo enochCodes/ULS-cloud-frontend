@@ -39,14 +39,16 @@ export default function LoginPage() {
         setIsLoading(true)
         setError(null)
         try {
-            const response = await authService.login(data)
-            localStorage.setItem("token", response.token)
+            const token = await authService.login(data)
+            localStorage.setItem("token", token)
             router.push("/dashboard")
         } catch (err) {
             console.error(err)
             let message = "Invalid email or password"
             if (axios.isAxiosError(err)) {
                 message = err.response?.data?.message || message
+            } else if (err instanceof Error) {
+                message = err.message || message
             }
             setError(message)
         } finally {

@@ -14,7 +14,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
-import { appService, AppConfig } from "@/services/appService"
+import { adminService, AdminApp } from "@/services/api/admin"
 
 const iconMap: Record<string, React.ElementType> = {
     "users": Users,
@@ -24,16 +24,23 @@ const iconMap: Record<string, React.ElementType> = {
     "layout": LayoutDashboard
 }
 
+const slugToHref: Record<string, string> = {
+    crm: "/crm",
+    ticketing: "/ticketing",
+    marketplace: "/marketplace",
+    settings: "/settings",
+}
+
 export function DashboardNav() {
     const pathname = usePathname()
-    const [apps, setApps] = React.useState<AppConfig[]>([])
+    const [apps, setApps] = React.useState<AdminApp[]>([])
     const [isLoading, setIsLoading] = React.useState(true)
 
     React.useEffect(() => {
         const fetchApps = async () => {
             try {
-                const data = await appService.getApps()
-                setApps(data)
+                const data = await adminService.getApps()
+                setApps(data.filter((a) => a.available))
             } catch (err) {
                 console.error("Failed to fetch apps", err)
             } finally {
@@ -54,7 +61,6 @@ export function DashboardNav() {
 
     return (
         <nav className="grid items-start gap-2">
-            {/* Direct Dashboard Link */}
             <Link
                 href="/dashboard"
                 className={cn(
@@ -69,13 +75,13 @@ export function DashboardNav() {
                 <span>Overview</span>
             </Link>
 
-            {apps.map((app, index) => {
+            {apps.map((app) => {
                 const Icon = iconMap[app.icon] || Package
-                const href = app.slug.startsWith("/") ? app.slug : `/${app.slug}`
+                const href = slugToHref[app.slug] || `/${app.slug}`
 
                 return (
                     <Link
-                        key={index}
+                        key={app.id}
                         href={href}
                         className={cn(
                             buttonVariants({ variant: "ghost" }),

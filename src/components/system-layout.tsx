@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { getUserDisplayName, getUserEmail, getUserInitials, logout } from "@/lib/auth"
 import {
   LayoutGrid,
   Package,
@@ -33,7 +34,16 @@ interface SystemLayoutProps {
 export function SystemLayout({ children, domain }: SystemLayoutProps) {
   const pathname = usePathname()
   const [org, setOrg] = React.useState<Organization | null>(null)
-  const [loading, setLoading] = React.useState(true)
+  const [, setLoading] = React.useState(true)
+  const [userName, setUserName] = React.useState("Admin User")
+  const [userEmail, setUserEmail] = React.useState("admin@uls.cloud")
+  const [userInitials, setUserInitials] = React.useState("A")
+
+  React.useEffect(() => {
+    setUserName(getUserDisplayName())
+    setUserEmail(getUserEmail())
+    setUserInitials(getUserInitials())
+  }, [])
 
   React.useEffect(() => {
     const load = async () => {
@@ -65,7 +75,6 @@ export function SystemLayout({ children, domain }: SystemLayoutProps) {
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-muted/20 md:flex">
         <div className="flex h-16 items-center border-b px-6">
             <Link href="/" className="flex items-center gap-2 font-black uppercase tracking-tighter hover:opacity-80 transition-opacity">
@@ -117,34 +126,34 @@ export function SystemLayout({ children, domain }: SystemLayoutProps) {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">System Normal</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                        {org?.name || "Organization"}
+                    </span>
                 </div>
-                <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] text-muted-foreground">
-                        <span>CPU Load</span>
-                        <span>24%</span>
-                    </div>
-                    <div className="h-1 w-full bg-primary/10 rounded-full overflow-hidden">
-                        <div className="h-full w-[24%] bg-primary transition-all duration-1000" />
-                    </div>
-                </div>
+                {org?.subdomain && (
+                    <p className="text-[10px] text-muted-foreground">{org.subdomain}.ulsplatform.com</p>
+                )}
             </div>
             <div className="mt-4 flex items-center gap-3 px-1">
                  <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center font-bold text-white text-xs shadow-lg">
-                    A
+                    {userInitials}
                  </div>
                  <div className="flex-1 overflow-hidden">
-                    <p className="truncate text-sm font-bold">Admin User</p>
-                    <p className="truncate text-xs text-muted-foreground">admin@uls.cloud</p>
+                    <p className="truncate text-sm font-bold">{userName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
                  </div>
-                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors" asChild>
-                    <Link href="/auth/login"><LogOut className="h-4 w-4" /></Link>
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                    onClick={logout}
+                 >
+                    <LogOut className="h-4 w-4" />
                  </Button>
             </div>
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         <header className="flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 z-10 sticky top-0">
             <div className="flex items-center gap-4 w-full max-w-md">

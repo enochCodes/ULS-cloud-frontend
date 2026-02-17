@@ -16,29 +16,34 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { crmCustomers, crmOrders } from "@/services/api/crm"
-import { organizationService } from "@/services/api/organization"
+import { adminService, AdminActivity } from "@/services/api/admin"
+import { ticketingTickets } from "@/services/api/ticketing"
 
 export default function DashboardPage() {
     const [customersCount, setCustomersCount] = useState<number | null>(null)
     const [ordersCount, setOrdersCount] = useState<number | null>(null)
-    const [orgCount, setOrgCount] = useState<number | null>(null)
+    const [ticketsCount, setTicketsCount] = useState<number | null>(null)
+    const [activities, setActivities] = useState<AdminActivity[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const load = async () => {
             try {
-                const [customers, orders, orgs] = await Promise.all([
-                    crmCustomers.list(),
-                    crmOrders.list(),
-                    organizationService.list(),
+                const [customers, orders, tickets, acts] = await Promise.all([
+                    crmCustomers.list().catch(() => []),
+                    crmOrders.list().catch(() => []),
+                    ticketingTickets.adminList().catch(() => []),
+                    adminService.getActivities().catch(() => []),
                 ])
                 setCustomersCount(Array.isArray(customers) ? customers.length : 0)
                 setOrdersCount(Array.isArray(orders) ? orders.length : 0)
-                setOrgCount(Array.isArray(orgs) ? orgs.length : 0)
+                setTicketsCount(Array.isArray(tickets) ? tickets.length : 0)
+                setActivities(Array.isArray(acts) ? acts : [])
             } catch {
                 setCustomersCount(0)
                 setOrdersCount(0)
-                setOrgCount(0)
+                setTicketsCount(0)
+                setActivities([])
             } finally {
                 setLoading(false)
             }
@@ -49,14 +54,14 @@ export default function DashboardPage() {
     const isLoading = loading
     const customers = customersCount ?? 0
     const orders = ordersCount ?? 0
-    const tickets = 0 // Ticketing service not yet available
+    const tickets = ticketsCount ?? 0
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h2 className="text-3xl font-black tracking-tight">System Overview</h2>
-                    <p className="text-muted-foreground mt-1">Real-time telemetry across your neural workspace.</p>
+                    <p className="text-muted-foreground mt-1">Real-time telemetry across your workspace.</p>
                 </div>
                 <div className="flex gap-3">
                     <Button variant="outline" className="gap-2">
@@ -97,10 +102,18 @@ export default function DashboardPage() {
                         <Ticket className="h-4 w-4 text-blue-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{tickets}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Quantum Support coming soon
-                        </p>
+                        {isLoading ? (
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">{tickets}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    <span className="text-blue-500 font-bold inline-flex items-center">
+                                        <ArrowUpRight className="mr-1 h-3 w-3" /> Ticketing
+                                    </span> from Support
+                                </p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
                 <Card className="border-none shadow-md bg-gradient-to-br from-emerald-500/5 to-transparent hover:shadow-lg transition-all">
@@ -141,35 +154,57 @@ export default function DashboardPage() {
                 <Card className="col-span-4 border-none shadow-md">
                     <CardHeader>
                         <CardTitle>Organization Pulse</CardTitle>
-                        <CardDescription>Combined activity across all neural modules.</CardDescription>
+                        <CardDescription>Combined activity across all modules.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px] flex items-end justify-between px-2 gap-2">
-                        {[35, 60, 45, 75, 55, 80, 70, 45, 60, 90, 65, 50].map((h, i) => (
-                            <div key={i} className="flex-1 flex flex-col justify-end group h-full">
-                                <div
-                                    className="w-full bg-primary/10 rounded-t-sm transition-all duration-500 group-hover:bg-primary/30 relative"
-                                    style={{ height: `${h}%` }}
-                                >
-                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-xs p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                        Activity Score: {h}
+                        {[customers, orders, tickets, customers + orders, Math.max(customers, orders), tickets + customers, orders + tickets, customers, orders, tickets, Math.max(customers, orders, tickets), customers + orders + tickets].map((val, i) => {
+                            const maxVal = Math.max(customers + orders + tickets, 1)
+                            const h = Math.max(10, Math.min(95, (val / maxVal) * 100))
+                            return (
+                                <div key={i} className="flex-1 flex flex-col justify-end group h-full">
+                                    <div
+                                        className="w-full bg-primary/10 rounded-t-sm transition-all duration-500 group-hover:bg-primary/30 relative"
+                                        style={{ height: `${h}%` }}
+                                    >
+                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-xs p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                            Count: {val}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </CardContent>
                 </Card>
 
                 <Card className="col-span-3 border-none shadow-md">
                     <CardHeader>
                         <CardTitle>Recent Activity</CardTitle>
-                        <CardDescription>Latest system events and audits from all services.</CardDescription>
+                        <CardDescription>Latest system events from all services.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-6 min-h-[200px] flex flex-col items-center justify-center py-12 text-center">
-                            <Activity className="h-12 w-12 text-muted-foreground/30" />
-                            <p className="text-sm text-muted-foreground">Activity collector service coming soon</p>
-                            <p className="text-xs text-muted-foreground/70">Unified activity feed from CRM, Ticketing, and other modules will appear here.</p>
-                        </div>
+                        {activities.length > 0 ? (
+                            <div className="space-y-4">
+                                {activities.slice(0, 8).map((act, i) => (
+                                    <div key={act.id || i} className="flex items-start gap-3">
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+                                            {(act.user || "S").charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">{act.action}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {act.user || "System"} &middot; {act.app || "Platform"} &middot; {act.time || ""}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-6 min-h-[200px] flex flex-col items-center justify-center py-12 text-center">
+                                <Activity className="h-12 w-12 text-muted-foreground/30" />
+                                <p className="text-sm text-muted-foreground">No recent activity found</p>
+                                <p className="text-xs text-muted-foreground/70">Activity feed from CRM, Ticketing, and other modules will appear here.</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -178,7 +213,7 @@ export default function DashboardPage() {
                 <div className="rounded-2xl border bg-card p-6 flex items-center justify-between">
                     <div className="space-y-1">
                         <h3 className="font-bold text-lg">Quick Start Guide</h3>
-                        <p className="text-sm text-muted-foreground">Learn how to configure your neural workspace.</p>
+                        <p className="text-sm text-muted-foreground">Learn how to configure your workspace.</p>
                     </div>
                     <Button variant="outline" asChild>
                         <Link href="/crm/settings">View Docs</Link>

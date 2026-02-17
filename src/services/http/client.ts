@@ -32,6 +32,7 @@ const attachInterceptors = (instance: AxiosInstance, withAuth: boolean) => {
         (error) => {
             if (withAuth && error.response?.status === 401 && typeof window !== "undefined") {
                 if (!window.location.pathname.startsWith("/auth")) {
+                    localStorage.removeItem("token")
                     window.location.href = "/auth/login"
                 }
             }
@@ -62,17 +63,33 @@ const wrap = (instance: AxiosInstance): HttpClient => ({
     instance,
 })
 
+// SSO Service (Auth, organizations, subscriptions)
 export const coreAxiosClient = createAxiosClient({
     baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
     withAuth: true,
 })
 
+// CRM Service (Customers, orders, communications)
 export const crmAxiosClient = createAxiosClient({
     baseURL: process.env.NEXT_PUBLIC_CRM_API_URL || "http://localhost:8081/api/v1",
     withAuth: true,
 })
 
+// Ticketing Service (Events, tickets, plans, payments)
+export const ticketingAxiosClient = createAxiosClient({
+    baseURL: process.env.NEXT_PUBLIC_TICKETING_API_URL || "http://localhost:8082/api/v1",
+    withAuth: true,
+})
+
+// Payment Service (Chapa payment initiation)
+export const paymentAxiosClient = createAxiosClient({
+    baseURL: process.env.NEXT_PUBLIC_PAYMENT_API_URL || "http://localhost:8083/api/v1",
+    withAuth: true,
+})
+
 export const coreHttpClient = wrap(coreAxiosClient)
 export const crmHttpClient = wrap(crmAxiosClient)
+export const ticketingHttpClient = wrap(ticketingAxiosClient)
+export const paymentHttpClient = wrap(paymentAxiosClient)
 
 export type { AxiosRequestConfig }

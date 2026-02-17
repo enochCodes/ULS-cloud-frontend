@@ -17,11 +17,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { authService } from "@/services/core/auth"
 
 const formSchema = z.object({
-    name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+    first_name: z.string().min(2, { message: "First name must be at least 2 characters" }),
+    last_name: z.string().min(2, { message: "Last name must be at least 2 characters" }),
     email: z.string().email({ message: "Invalid email address" }),
     password: z.string().min(6, { message: "Password must be at least 6 characters" }),
     subdomain: z.string().min(3, { message: "Subdomain must be at least 3 characters" })
-        .regex(/^[a-z0-9-]+$/, { message: "Only letters, numbers and hyphens allowed" }),
+        .regex(/^[a-z0-9-]+$/, { message: "Only lowercase letters, numbers and hyphens allowed" }),
     confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -34,6 +35,7 @@ export default function RegisterPage() {
     const router = useRouter()
     const [isLoading, setIsLoading] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
+    const [step, setStep] = React.useState<"registering" | "creating_org" | null>(null)
 
     const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -45,24 +47,45 @@ export default function RegisterPage() {
         setIsLoading(true)
         setError(null)
         try {
+            setStep("registering")
             await authService.register({
-                full_name: data.name,
+                first_name: data.first_name,
+                last_name: data.last_name,
                 email: data.email,
                 password: data.password,
-                organization_name: data.subdomain,
             })
+
+            setStep("creating_org")
+            const token = await authService.login({
+                email: data.email,
+                password: data.password,
+            })
+            localStorage.setItem("token", token)
+
+            await authService.createOrganization({
+                name: `${data.first_name}'s Organization`,
+                subdomain: data.subdomain,
+            })
+
+            localStorage.removeItem("token")
+
             router.push("/auth/login?registered=true")
         } catch (err) {
             console.error(err)
             let message = "Registration failed. Please try again."
             if (axios.isAxiosError(err)) {
                 message = err.response?.data?.message || message
+            } else if (err instanceof Error) {
+                message = err.message || message
             }
             setError(message)
         } finally {
             setIsLoading(false)
+            setStep(null)
         }
     }
+
+    const loadingText = step === "creating_org" ? "Setting up workspace..." : "Creating account..."
 
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 px-4 py-12">
@@ -86,7 +109,7 @@ export default function RegisterPage() {
                         </div>
                         <CardTitle className="text-2xl font-bold tracking-tight">Create your workspace</CardTitle>
                         <CardDescription>
-                            Join 500+ organizations building on ULS Cloud
+                            Join organizations building on ULS Cloud
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -99,15 +122,21 @@ export default function RegisterPage() {
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Full Name</Label>
-                                    <Input id="name" placeholder="John Doe" {...register("name")} className="h-11" />
-                                    {errors.name && <p className="text-xs font-medium text-destructive">{errors.name.message}</p>}
+                                    <Label htmlFor="first_name">First Name</Label>
+                                    <Input id="first_name" placeholder="John" {...register("first_name")} className="h-11" />
+                                    {errors.first_name && <p className="text-xs font-medium text-destructive">{errors.first_name.message}</p>}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Email address</Label>
-                                    <Input id="email" placeholder="name@company.com" type="email" {...register("email")} className="h-11" />
-                                    {errors.email && <p className="text-xs font-medium text-destructive">{errors.email.message}</p>}
+                                    <Label htmlFor="last_name">Last Name</Label>
+                                    <Input id="last_name" placeholder="Doe" {...register("last_name")} className="h-11" />
+                                    {errors.last_name && <p className="text-xs font-medium text-destructive">{errors.last_name.message}</p>}
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email address</Label>
+                                <Input id="email" placeholder="name@company.com" type="email" {...register("email")} className="h-11" />
+                                {errors.email && <p className="text-xs font-medium text-destructive">{errors.email.message}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -148,7 +177,7 @@ export default function RegisterPage() {
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Creating workspace...
+                                        {loadingText}
                                     </>
                                 ) : "Create Workspace"}
                             </Button>

@@ -5,18 +5,48 @@ export interface LoginPayload {
     password: string
 }
 
-export interface AuthResponse {
-    token: string
-}
-
 export interface RegisterPayload {
     email: string
     password: string
-    full_name?: string
-    organization_name?: string
+    first_name: string
+    last_name: string
+}
+
+export interface CreateOrganizationPayload {
+    name: string
+    address?: string
+    subdomain: string
+}
+
+interface SSOResponse<T = unknown> {
+    success: boolean
+    code?: number
+    message?: string
+    data?: T
 }
 
 export const authService = {
-    login: (payload: LoginPayload) => coreHttpClient.post<AuthResponse>("/auth/login", payload),
-    register: (payload: RegisterPayload) => coreHttpClient.post<AuthResponse>("/auth/register", payload),
+    login: async (payload: LoginPayload): Promise<string> => {
+        const res = await coreHttpClient.post<SSOResponse<string>>("/auth/login", payload)
+        if (!res.success || !res.data) {
+            throw new Error(res.message || "Login failed")
+        }
+        return res.data
+    },
+
+    register: async (payload: RegisterPayload): Promise<SSOResponse> => {
+        const res = await coreHttpClient.post<SSOResponse>("/auth/register", payload)
+        if (!res.success) {
+            throw new Error(res.message || "Registration failed")
+        }
+        return res
+    },
+
+    createOrganization: async (payload: CreateOrganizationPayload): Promise<SSOResponse> => {
+        const res = await coreHttpClient.post<SSOResponse>("/organization", payload)
+        if (!res.success) {
+            throw new Error(res.message || "Organization creation failed")
+        }
+        return res
+    },
 }

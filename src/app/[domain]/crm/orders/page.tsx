@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ClipboardList, Plus, RefreshCw, ArrowLeft, CheckCircle2, Trash2, X, Eye } from "lucide-react"
+import { ClipboardList, Plus, RefreshCw, ArrowLeft, CheckCircle2, Trash2, X, Eye, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,7 +39,7 @@ function parseCustomFieldsData(data: string | undefined): Record<string, string>
 export default function OrdersPage() {
     const [customers, setCustomers] = useState<Customer[]>([])
     const [orders, setOrders] = useState<Order[]>([])
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const [isSheetOpen, setIsSheetOpen] = useState(false)
     const [detailsOrder, setDetailsOrder] = useState<Order | null>(null)
     const [form, setForm] = useState({
@@ -65,12 +65,6 @@ export default function OrdersPage() {
         }
     }
 
-    const defaultSchema: CustomOrderFieldSchema[] = [
-        { id: "gsm", label: "GSM", type: "number", required: true },
-        { id: "width", label: "Width (cm)", type: "number", required: true },
-        { id: "color", label: "Color", type: "text", required: true },
-    ]
-
     useEffect(() => {
         const load = async () => {
             setIsLoading(true)
@@ -80,18 +74,13 @@ export default function OrdersPage() {
                     crmOrders.list().catch(() => []),
                     crmSettings.get().catch(() => null),
                 ])
-                let custList = Array.isArray(c) ? c : []
-                let orderList = Array.isArray(o) ? o : []
-                if (custList.length === 0 || orderList.length === 0) {
-                    const { mockCustomers, mockOrders } = await import("@/mocks/orders")
-                    if (custList.length === 0) custList = mockCustomers
-                    if (orderList.length === 0) orderList = mockOrders
-                }
+                const custList = Array.isArray(c) ? c : []
+                const orderList = Array.isArray(o) ? o : []
                 setCustomers(custList)
                 setOrders(orderList)
                 setForm((f) => ({ ...f, customer_id: f.customer_id || custList[0]?.id || 0 }))
                 const schema = parseSchema(settings?.custom_order_fields_schema)
-                setCustomFieldsSchema(schema.length ? schema : defaultSchema)
+                setCustomFieldsSchema(schema)
             } finally {
                 setIsLoading(false)
             }
@@ -113,14 +102,14 @@ export default function OrdersPage() {
                 notes: form.notes,
                 deadline_at: form.deadline_at,
                 items: [],
-                required_fields_data: JSON.stringify(form.custom_fields)
+                required_fields_data: Object.keys(form.custom_fields).length > 0 ? JSON.stringify(form.custom_fields) : undefined
             })
             setOrders((prev) => [created, ...prev])
             setIsSheetOpen(false)
             setForm((p) => ({ ...p, notes: "", deadline_at: "", custom_fields: {} }))
         } catch (err) {
             console.error(err)
-            setError("API unavailable. Please check your connection and try again.")
+            setError("Failed to create order. Please check your connection and try again.")
         } finally {
             setIsLoading(false)
         }
@@ -142,6 +131,20 @@ export default function OrdersPage() {
     }
 
     const openDetails = (order: Order) => setDetailsOrder(order)
+
+    const reload = async () => {
+        setIsLoading(true)
+        try {
+            const [c, o] = await Promise.all([
+                crmCustomers.list().catch(() => []),
+                crmOrders.list().catch(() => []),
+            ])
+            setCustomers(Array.isArray(c) ? c : [])
+            setOrders(Array.isArray(o) ? o : [])
+        } finally {
+            setIsLoading(false)
+        }
+    }
 
     return (
         <div className="space-y-6">
@@ -290,8 +293,8 @@ export default function OrdersPage() {
                             </SheetFooter>
                         </SheetContent>
                     </Sheet>
-                    <Button variant="ghost" onClick={() => window.location.reload()} disabled={isLoading}>
-                        <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+                    <Button variant="ghost" onClick={reload} disabled={isLoading}>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
                     </Button>
                 </div>
             </div>
@@ -306,69 +309,77 @@ export default function OrdersPage() {
                     </div>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="text-left text-muted-foreground">
-                            <tr>
-                                <th className="px-4 py-2">Order ID</th>
-                                <th className="px-4 py-2">Customer</th>
-                                <th className="px-4 py-2">Type</th>
-                                <th className="px-4 py-2">Qty</th>
-                                <th className="px-4 py-2">Priority</th>
-                                <th className="px-4 py-2">Status</th>
-                                <th className="px-4 py-2">Created</th>
-                                <th className="px-4 py-2">Deadline</th>
-                                <th className="px-4 py-2 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {orders.map((order) => {
-                                const customer = customers.find((c) => c.id === order.customer_id)
-                                const qty = getOrderQuantity(order)
-                                return (
-                                    <tr
-                                        key={order.id}
-                                        className="hover:bg-muted/40 cursor-pointer"
-                                        onClick={() => openDetails(order)}
-                                    >
-                                        <td className="px-4 py-3 font-semibold">#{order.id}</td>
-                                        <td className="px-4 py-3 font-medium">{customer?.full_name || "Unknown"}</td>
-                                        <td className="px-4 py-3 text-muted-foreground capitalize">{order.order_type || "service"}</td>
-                                        <td className="px-4 py-3">
-                                            <span className="font-medium">{qty}</span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge variant="secondary" className="capitalize">{order.priority || "medium"}</Badge>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge className={orderTone[order.status]?.className}>{orderTone[order.status]?.label}</Badge>
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">{order.created_at ? new Date(order.created_at).toLocaleDateString() : "-"}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{order.deadline_at ? new Date(order.deadline_at).toLocaleDateString() : "-"}</td>
-                                        <td className="px-4 py-3 text-right space-x-1" onClick={(e) => e.stopPropagation()}>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openDetails(order)} title="View details">
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                            {order.status !== "confirmed" && (
-                                                <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus(order.id, "confirmed")} className="text-primary hover:text-primary/80">
-                                                    <CheckCircle2 className="h-4 w-4" />
+                    {isLoading ? (
+                        <div className="flex justify-center py-12">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : orders.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-12 text-center">No orders found. Create your first order to get started.</p>
+                    ) : (
+                        <table className="w-full text-sm">
+                            <thead className="text-left text-muted-foreground">
+                                <tr>
+                                    <th className="px-4 py-2">Order ID</th>
+                                    <th className="px-4 py-2">Customer</th>
+                                    <th className="px-4 py-2">Type</th>
+                                    <th className="px-4 py-2">Qty</th>
+                                    <th className="px-4 py-2">Priority</th>
+                                    <th className="px-4 py-2">Status</th>
+                                    <th className="px-4 py-2">Created</th>
+                                    <th className="px-4 py-2">Deadline</th>
+                                    <th className="px-4 py-2 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">
+                                {orders.map((order) => {
+                                    const customer = customers.find((c) => c.id === order.customer_id)
+                                    const qty = getOrderQuantity(order)
+                                    return (
+                                        <tr
+                                            key={order.id}
+                                            className="hover:bg-muted/40 cursor-pointer"
+                                            onClick={() => openDetails(order)}
+                                        >
+                                            <td className="px-4 py-3 font-semibold">#{order.id}</td>
+                                            <td className="px-4 py-3 font-medium">{customer?.full_name || "Unknown"}</td>
+                                            <td className="px-4 py-3 text-muted-foreground capitalize">{order.order_type || "service"}</td>
+                                            <td className="px-4 py-3">
+                                                <span className="font-medium">{qty}</span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <Badge variant="secondary" className="capitalize">{order.priority || "medium"}</Badge>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <Badge className={orderTone[order.status]?.className}>{orderTone[order.status]?.label}</Badge>
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">{order.created_at ? new Date(order.created_at).toLocaleDateString() : "-"}</td>
+                                            <td className="px-4 py-3 text-muted-foreground">{order.deadline_at ? new Date(order.deadline_at).toLocaleDateString() : "-"}</td>
+                                            <td className="px-4 py-3 text-right space-x-1" onClick={(e) => e.stopPropagation()}>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openDetails(order)} title="View details">
+                                                    <Eye className="h-4 w-4" />
                                                 </Button>
-                                            )}
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(order.id)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
+                                                {order.status !== "confirmed" && (
+                                                    <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus(order.id, "confirmed")} className="text-primary hover:text-primary/80">
+                                                        <CheckCircle2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(order.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    )}
                 </CardContent>
             </Card>
 
             <OrderDetailsSheet
                 order={detailsOrder}
                 customers={customers}
-                customFieldsSchema={customFieldsSchema.length ? customFieldsSchema : defaultSchema}
+                customFieldsSchema={customFieldsSchema}
                 onClose={() => setDetailsOrder(null)}
                 onUpdateStatus={handleUpdateStatus}
                 onDelete={handleDelete}
@@ -456,7 +467,7 @@ function OrderDetailsSheet({
                                     <div key={item.id} className="flex justify-between px-4 py-2 text-sm">
                                         <span>{item.name}</span>
                                         <span className="text-muted-foreground">
-                                            {item.quantity} × {item.unit_price} = {(item.quantity * item.unit_price).toFixed(2)}
+                                            {item.quantity} x {item.unit_price} = {(item.quantity * item.unit_price).toFixed(2)}
                                         </span>
                                     </div>
                                 ))}

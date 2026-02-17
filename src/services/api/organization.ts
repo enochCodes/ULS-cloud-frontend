@@ -54,8 +54,7 @@ export const organizationService = {
   create: (data: Partial<Organization>) => coreHttpClient.post<GenericResponse>("/organization", data),
   update: (id: number, data: Partial<Organization>) => coreHttpClient.put<GenericResponse>(`/organization/${id}`, data),
   delete: (id: number) => coreHttpClient.delete<GenericResponse>(`/organization/${id}`),
-  updateApps: (data: Organization) => coreHttpClient.put<GenericResponse>("/organization/apps", data),
-  verifyOwner: (data: Organization) => coreHttpClient.post<GenericResponse>("/organization/verify-owner", data),
+  updateApps: (data: { id: number; apps: string[] }) => coreHttpClient.put<GenericResponse>("/organization/apps", data),
 }
 
 export const subscriptionService = {
@@ -68,7 +67,7 @@ export const subscriptionService = {
     return res?.data as Subscription | undefined
   },
   create: (data: Partial<Subscription>) => coreHttpClient.post<GenericResponse>("/organization/subscriptions", data),
-  update: (id: number, data: Partial<Subscription>) => coreHttpClient.put<GenericResponse>(`/organization/subscriptions/${id}`, data),
+  update: (data: Partial<Subscription>) => coreHttpClient.put<GenericResponse>("/organization/subscriptions", data),
   delete: (id: number) => coreHttpClient.delete<GenericResponse>(`/organization/subscriptions/${id}`),
 }
 

@@ -3,8 +3,8 @@ import { createAxiosClient } from "@/services/http/client"
 const adminBaseURL = process.env.NEXT_PUBLIC_ADMIN_API_URL || "http://localhost:8084/api/v1"
 const adminClient = createAxiosClient({
   baseURL: adminBaseURL,
-  withAuth: false,
-}).instance
+  withAuth: true,
+})
 
 export interface AdminApp {
   id: string

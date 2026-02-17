@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { MessageSquare, Mail, Plus, Send, RefreshCw, Smartphone, X } from "lucide-react"
+import { Mail, Plus, Send, RefreshCw, Smartphone, X } from "lucide-react"
 import { crmCommunications, crmCustomers, Customer, Message, MessageChannel, MessageTemplate } from "@/services/api/crm"
 
 export default function CommunicationsPage() {
