@@ -17,17 +17,20 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { getUserDisplayName, getUserEmail, getUserInitials, logout } from "@/lib/auth"
+import { Badge } from "@/components/ui/badge"
+import { getUserDisplayName, getUserEmail, getUserInitials, getUserRole, logout } from "@/lib/auth"
 
 export function UserNav() {
     const [name, setName] = useState("User")
     const [email, setEmail] = useState("")
     const [initials, setInitials] = useState("U")
+    const [role, setRole] = useState("user")
 
     useEffect(() => {
         setName(getUserDisplayName())
         setEmail(getUserEmail())
         setInitials(getUserInitials())
+        setRole(getUserRole())
     }, [])
 
     return (
@@ -47,7 +50,12 @@ export function UserNav() {
             <DropdownMenuContent className="w-56 z-[100]" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{name}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium leading-none">{name}</p>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize">
+                                {role}
+                            </Badge>
+                        </div>
                         <p className="text-xs leading-none text-muted-foreground">
                             {email || "No email"}
                         </p>

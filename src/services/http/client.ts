@@ -15,10 +15,12 @@ interface ClientOptions {
     defaultHeaders?: Record<string, string>
 }
 
+import { getToken, removeToken } from "@/lib/auth"
+
 const attachInterceptors = (instance: AxiosInstance, withAuth: boolean) => {
     instance.interceptors.request.use((config) => {
         if (withAuth && typeof window !== "undefined") {
-            const token = localStorage.getItem("token")
+            const token = getToken()
             if (token) {
                 config.headers = config.headers ?? {}
                 config.headers.Authorization = `Bearer ${token}`
@@ -32,7 +34,7 @@ const attachInterceptors = (instance: AxiosInstance, withAuth: boolean) => {
         (error) => {
             if (withAuth && error.response?.status === 401 && typeof window !== "undefined") {
                 if (!window.location.pathname.startsWith("/auth")) {
-                    localStorage.removeItem("token")
+                    removeToken()
                     window.location.href = "/auth/login"
                 }
             }
