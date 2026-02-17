@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { getUserDisplayName, getUserEmail, getUserInitials, logout } from "@/lib/auth"
+import { getUserDisplayName, getUserEmail, getUserInitials, getUserRole, hasMinimumRole, logout, UserRole } from "@/lib/auth"
 import {
   LayoutGrid,
   Package,
@@ -18,9 +18,10 @@ import { UserNav } from "@/components/user-nav"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Badge } from "@/components/ui/badge"
 import { organizationService, Organization } from "@/services/api/organization"
 
-const APP_SLUG_MAP: Record<string, { name: string; href: string; icon: React.ElementType }> = {
+const APP_SLUG_MAP: Record<string, { name: string; href: string; icon: React.ElementType; minRole?: UserRole }> = {
   crm: { name: "Neuro CRM", href: "/crm", icon: Users },
   ticketing: { name: "Quantum Support", href: "/ticketing", icon: MessageSquare },
   marketplace: { name: "App Marketplace", href: "/marketplace", icon: Package },
@@ -36,11 +37,13 @@ export function SystemLayout({ children }: SystemLayoutProps) {
   const [userName, setUserName] = React.useState("Admin User")
   const [userEmail, setUserEmail] = React.useState("admin@uls.cloud")
   const [userInitials, setUserInitials] = React.useState("A")
+  const [userRole, setUserRole] = React.useState<UserRole>("user")
 
   React.useEffect(() => {
     setUserName(getUserDisplayName())
     setUserEmail(getUserEmail())
     setUserInitials(getUserInitials())
+    setUserRole(getUserRole())
   }, [])
 
   React.useEffect(() => {
@@ -58,10 +61,16 @@ export function SystemLayout({ children }: SystemLayoutProps) {
 
   const activeAppSlugs = org?.apps?.filter((s) => APP_SLUG_MAP[s]) ?? ["crm"]
   const appItems = activeAppSlugs.map((slug) => APP_SLUG_MAP[slug]).filter(Boolean)
+  
+  // Only show settings if user has at least manager role
+  const settingsItem = hasMinimumRole("manager") 
+    ? [{ name: "Admin Control", href: "/settings", icon: Settings, minRole: "manager" as UserRole }]
+    : []
+  
   const allItems = [
     ...appItems,
     { name: "App Marketplace", href: "/marketplace", icon: Package },
-    { name: "Admin Control", href: "/settings", icon: Settings },
+    ...settingsItem,
   ]
 
   const sidebarGroups = [
@@ -132,7 +141,12 @@ export function SystemLayout({ children }: SystemLayoutProps) {
                     {userInitials}
                  </div>
                  <div className="flex-1 overflow-hidden">
-                    <p className="truncate text-sm font-bold">{userName}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-bold">{userName}</p>
+                      <Badge variant="secondary" className="text-[8px] px-1 py-0 capitalize shrink-0">
+                        {userRole}
+                      </Badge>
+                    </div>
                     <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
                  </div>
                  <Button
