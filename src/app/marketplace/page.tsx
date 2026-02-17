@@ -88,14 +88,17 @@ export default function MarketplacePage() {
             .flatMap((sub) => sub.apps || [])
             .filter((slug, i, arr) => arr.indexOf(slug) === i)
             .filter((slug) => !AVAILABLE_APPS.some((a) => a.slug === slug))
-            .map((slug) => ({
-                slug,
-                name: slug.charAt(0).toUpperCase() + slug.slice(1),
-                description: `${slug.charAt(0).toUpperCase() + slug.slice(1)} module from your subscription.`,
-                icon: Package as LucideIcon,
-                color: "text-slate-500 bg-slate-500/10",
-                href: `/${slug}`,
-            })),
+            .map((slug) => {
+                const label = slug.charAt(0).toUpperCase() + slug.slice(1)
+                return {
+                    slug,
+                    name: label,
+                    description: `${label} module from your subscription.`,
+                    icon: Package as LucideIcon,
+                    color: "text-slate-500 bg-slate-500/10",
+                    href: `/${slug}`,
+                }
+            }),
     ]
 
     const filteredApps = allApps.filter((app) => {

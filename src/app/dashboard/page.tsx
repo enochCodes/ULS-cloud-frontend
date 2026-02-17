@@ -186,8 +186,8 @@ export default function DashboardPage() {
                             <div className="space-y-4">
                                 {auditLogs.slice(0, 8).map((log, i) => (
                                     <div key={log.id || i} className="flex items-start gap-3">
-                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
-                                            {log.entity_type.charAt(0).toUpperCase()}
+                                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold shrink-0 uppercase">
+                                            {log.entity_type.slice(0, 3)}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium truncate">{log.action} {log.entity_type}</p>
