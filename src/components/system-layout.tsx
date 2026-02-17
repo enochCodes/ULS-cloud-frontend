@@ -28,13 +28,11 @@ const APP_SLUG_MAP: Record<string, { name: string; href: string; icon: React.Ele
 
 interface SystemLayoutProps {
   children: React.ReactNode
-  domain: string
 }
 
-export function SystemLayout({ children, domain }: SystemLayoutProps) {
+export function SystemLayout({ children }: SystemLayoutProps) {
   const pathname = usePathname()
   const [org, setOrg] = React.useState<Organization | null>(null)
-  const [, setLoading] = React.useState(true)
   const [userName, setUserName] = React.useState("Admin User")
   const [userEmail, setUserEmail] = React.useState("admin@uls.cloud")
   const [userInitials, setUserInitials] = React.useState("A")
@@ -53,8 +51,6 @@ export function SystemLayout({ children, domain }: SystemLayoutProps) {
         else setOrg({ id: 0, name: "Organization", apps: ["crm"] })
       } catch {
         setOrg({ id: 0, name: "Organization", apps: ["crm"] })
-      } finally {
-        setLoading(false)
       }
     }
     load()
@@ -93,15 +89,12 @@ export function SystemLayout({ children, domain }: SystemLayoutProps) {
                         </h3>
                         <div className="space-y-1">
                             {group.items.map((item) => {
-                                const fullHref = item.href.startsWith("#") 
-                                    ? item.href 
-                                    : (domain === "_root" ? item.href : `/${domain}${item.href}`)
-                                const isActive = pathname === fullHref || (item.href !== '/dashboard' && pathname?.startsWith(fullHref))
+                                const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href))
 
                                 return (
                                     <Link
                                         key={item.name}
-                                        href={fullHref}
+                                        href={item.href}
                                         className={cn(
                                             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                                             isActive 
