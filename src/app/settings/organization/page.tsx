@@ -22,8 +22,9 @@ import {
     Subscription,
     Transaction
 } from "@/services/api/organization"
+import { AuthGuard } from "@/components/auth-guard"
 
-export default function OrganizationSettings() {
+function OrganizationSettingsContent() {
     const [org, setOrg] = useState<Organization | null>(null)
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
     const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -243,5 +244,13 @@ export default function OrganizationSettings() {
                 </TabsContent>
             </Tabs>
         </div>
+    )
+}
+
+export default function OrganizationSettings() {
+    return (
+        <AuthGuard requiredRole="manager">
+            <OrganizationSettingsContent />
+        </AuthGuard>
     )
 }

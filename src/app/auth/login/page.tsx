@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService } from "@/services/core/auth"
+import { setToken } from "@/lib/auth"
 
 const formSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -31,6 +32,7 @@ function LoginForm() {
     const [error, setError] = React.useState<string | null>(null)
 
     const isRegistered = searchParams.get("registered") === "true"
+    const fromPath = searchParams.get("from")
 
     const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(formSchema),
@@ -41,8 +43,9 @@ function LoginForm() {
         setError(null)
         try {
             const token = await authService.login(data)
-            localStorage.setItem("token", token)
-            router.push("/dashboard")
+            setToken(token)
+            // Redirect to the original page if exists, otherwise dashboard
+            router.push(fromPath || "/dashboard")
         } catch (err) {
             console.error(err)
             let message = "Invalid email or password"

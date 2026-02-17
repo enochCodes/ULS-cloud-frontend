@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService } from "@/services/core/auth"
+import { setToken, removeToken } from "@/lib/auth"
 
 const formSchema = z.object({
     first_name: z.string().min(2, { message: "First name must be at least 2 characters" }),
@@ -60,14 +61,14 @@ export default function RegisterPage() {
                 email: data.email,
                 password: data.password,
             })
-            localStorage.setItem("token", token)
+            setToken(token)
 
             await authService.createOrganization({
                 name: `${data.first_name}'s Organization`,
                 subdomain: data.subdomain,
             })
 
-            localStorage.removeItem("token")
+            removeToken()
 
             router.push("/auth/login?registered=true")
         } catch (err) {

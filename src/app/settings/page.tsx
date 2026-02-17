@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Shield, Building2, Globe, Bell, Loader2, Save } from "lucide-react"
 import { organizationService, Organization } from "@/services/api/organization"
 import { crmSettings, OrgSettings } from "@/services/api/crm"
+import { AuthGuard } from "@/components/auth-guard"
 
-export default function SettingsPage() {
+function SettingsContent() {
     const [org, setOrg] = useState<Organization | null>(null)
     const [, setSettings] = useState<OrgSettings | null>(null)
     const [loading, setLoading] = useState(true)
@@ -243,5 +244,13 @@ export default function SettingsPage() {
                 </TabsContent>
             </Tabs>
         </div>
+    )
+}
+
+export default function SettingsPage() {
+    return (
+        <AuthGuard requiredRole="manager">
+            <SettingsContent />
+        </AuthGuard>
     )
 }
