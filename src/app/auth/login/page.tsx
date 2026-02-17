@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService } from "@/services/core/auth"
-import { setToken } from "@/lib/auth"
+import { setToken, hasOrganization } from "@/lib/auth"
 
 const formSchema = z.object({
     email: z.string().email({ message: "Invalid email address" }),
@@ -44,6 +44,11 @@ function LoginForm() {
         try {
             const token = await authService.login(data)
             setToken(token)
+            // If user has no organization, redirect to workspace setup
+            if (!hasOrganization()) {
+                router.push("/auth/setup-workspace")
+                return
+            }
             // Redirect to the original page if exists, otherwise dashboard
             router.push(fromPath || "/dashboard")
         } catch (err) {

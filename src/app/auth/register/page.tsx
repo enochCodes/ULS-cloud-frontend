@@ -15,15 +15,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService } from "@/services/core/auth"
-import { setToken, removeToken } from "@/lib/auth"
+import { setToken } from "@/lib/auth"
 
 const formSchema = z.object({
     first_name: z.string().min(2, { message: "First name must be at least 2 characters" }),
     last_name: z.string().min(2, { message: "Last name must be at least 2 characters" }),
     email: z.string().email({ message: "Invalid email address" }),
+    phone_number: z.string().optional(),
     password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-    subdomain: z.string().min(3, { message: "Subdomain must be at least 3 characters" })
-        .regex(/^[a-z0-9-]+$/, { message: "Only lowercase letters, numbers and hyphens allowed" }),
     confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -36,41 +35,25 @@ export default function RegisterPage() {
     const router = useRouter()
     const [isLoading, setIsLoading] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
-    const [step, setStep] = React.useState<"registering" | "creating_org" | null>(null)
 
-    const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
+    const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
         resolver: zodResolver(formSchema),
     })
-
-    const subdomain = watch("subdomain")
 
     const onSubmit = async (data: FormData) => {
         setIsLoading(true)
         setError(null)
         try {
-            setStep("registering")
-            await authService.register({
+            const token = await authService.register({
                 first_name: data.first_name,
                 last_name: data.last_name,
                 email: data.email,
                 password: data.password,
+                phone_number: data.phone_number || undefined,
             })
 
-            setStep("creating_org")
-            const token = await authService.login({
-                email: data.email,
-                password: data.password,
-            })
             setToken(token)
-
-            await authService.createOrganization({
-                name: `${data.first_name}'s Organization`,
-                subdomain: data.subdomain,
-            })
-
-            removeToken()
-
-            router.push("/auth/login?registered=true")
+            router.push("/auth/setup-workspace")
         } catch (err) {
             console.error(err)
             let message = "Registration failed. Please try again."
@@ -82,11 +65,8 @@ export default function RegisterPage() {
             setError(message)
         } finally {
             setIsLoading(false)
-            setStep(null)
         }
     }
-
-    const loadingText = step === "creating_org" ? "Setting up workspace..." : "Creating account..."
 
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 px-4 py-12">
@@ -108,7 +88,7 @@ export default function RegisterPage() {
                         <div className="flex justify-center mb-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xl">U</div>
                         </div>
-                        <CardTitle className="text-2xl font-bold tracking-tight">Create your workspace</CardTitle>
+                        <CardTitle className="text-2xl font-bold tracking-tight">Create your account</CardTitle>
                         <CardDescription>
                             Join organizations building on ULS Cloud
                         </CardDescription>
@@ -141,24 +121,8 @@ export default function RegisterPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="subdomain">Workspace URL</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="subdomain"
-                                        placeholder="your-company"
-                                        {...register("subdomain")}
-                                        className="h-11 pr-32"
-                                    />
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground font-medium border-l pl-3">
-                                        .ulsplatform.com
-                                    </div>
-                                </div>
-                                {subdomain && !errors.subdomain && (
-                                    <p className="text-[10px] text-muted-foreground">
-                                        Your site will be available at <span className="text-primary font-bold">{subdomain}.ulsplatform.com</span>
-                                    </p>
-                                )}
-                                {errors.subdomain && <p className="text-xs font-medium text-destructive">{errors.subdomain.message}</p>}
+                                <Label htmlFor="phone_number">Phone Number <span className="text-muted-foreground">(optional)</span></Label>
+                                <Input id="phone_number" placeholder="+1 (555) 000-0000" type="tel" {...register("phone_number")} className="h-11" />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -178,9 +142,9 @@ export default function RegisterPage() {
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        {loadingText}
+                                        Creating account...
                                     </>
-                                ) : "Create Workspace"}
+                                ) : "Create Account"}
                             </Button>
                         </form>
 

@@ -19,6 +19,9 @@ const protectedRoutes = [
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ["/auth/login", "/auth/register"];
 
+// Route for workspace setup (requires auth but no org)
+const setupWorkspaceRoute = "/auth/setup-workspace";
+
 function isProtectedRoute(pathname: string): boolean {
     return protectedRoutes.some((route) => pathname.startsWith(route));
 }
@@ -27,7 +30,11 @@ function isAuthRoute(pathname: string): boolean {
     return authRoutes.some((route) => pathname.startsWith(route));
 }
 
-function parseJWT(token: string): { exp?: number; role?: string } | null {
+function isSetupWorkspaceRoute(pathname: string): boolean {
+    return pathname.startsWith(setupWorkspaceRoute);
+}
+
+function parseJWT(token: string): { exp?: number; role?: string; org_id?: number } | null {
     try {
         const parts = token.split(".");
         if (parts.length !== 3) return null;
@@ -57,6 +64,8 @@ export default function middleware(request: NextRequest) {
     // Get token from cookie
     const token = request.cookies.get("token")?.value;
     const isAuthenticated = token ? isTokenValid(token) : false;
+    const payload = token ? parseJWT(token) : null;
+    const hasOrg = !!(payload?.org_id && payload.org_id > 0);
     
     // If user is on a protected route but not authenticated, redirect to login
     if (isProtectedRoute(pathname) && !isAuthenticated) {
@@ -64,9 +73,27 @@ export default function middleware(request: NextRequest) {
         loginUrl.searchParams.set("from", pathname);
         return NextResponse.redirect(loginUrl);
     }
+
+    // If authenticated user on a protected route has no org, redirect to setup workspace
+    if (isProtectedRoute(pathname) && isAuthenticated && !hasOrg) {
+        return NextResponse.redirect(new URL(setupWorkspaceRoute, request.url));
+    }
+
+    // If user is on setup-workspace but not authenticated, redirect to login
+    if (isSetupWorkspaceRoute(pathname) && !isAuthenticated) {
+        return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
+
+    // If user is on setup-workspace but already has an org, redirect to dashboard
+    if (isSetupWorkspaceRoute(pathname) && isAuthenticated && hasOrg) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
     
-    // If user is on auth routes but already authenticated, redirect to dashboard
+    // If user is on auth routes but already authenticated, redirect appropriately
     if (isAuthRoute(pathname) && isAuthenticated) {
+        if (!hasOrg) {
+            return NextResponse.redirect(new URL(setupWorkspaceRoute, request.url));
+        }
         return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     
