@@ -10,6 +10,7 @@ export interface RegisterPayload {
     password: string
     first_name: string
     last_name: string
+    phone_number?: string
 }
 
 export interface CreateOrganizationPayload {
@@ -27,19 +28,19 @@ interface SSOResponse<T = unknown> {
 
 export const authService = {
     login: async (payload: LoginPayload): Promise<string> => {
-        const res = await coreHttpClient.post<SSOResponse<string>>("/sso/login", payload)
+        const res = await coreHttpClient.post<SSOResponse<string>>("/auth/login", payload)
         if (!res.success || !res.data) {
             throw new Error(res.message || "Login failed")
         }
         return res.data
     },
 
-    register: async (payload: RegisterPayload): Promise<SSOResponse> => {
-        const res = await coreHttpClient.post<SSOResponse>("/sso/register", payload)
-        if (!res.success) {
+    register: async (payload: RegisterPayload): Promise<string> => {
+        const res = await coreHttpClient.post<SSOResponse<string>>("/auth/register", payload)
+        if (!res.success || !res.data) {
             throw new Error(res.message || "Registration failed")
         }
-        return res
+        return res.data
     },
 
     createOrganization: async (payload: CreateOrganizationPayload): Promise<SSOResponse> => {

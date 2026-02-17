@@ -93,6 +93,11 @@ export function isAuthenticated(): boolean {
     return !isTokenExpired()
 }
 
+export function hasOrganization(): boolean {
+    const payload = getTokenPayload()
+    return !!payload?.org_id && payload.org_id > 0
+}
+
 export function getUserRole(): UserRole {
     const payload = getTokenPayload()
     const role = payload?.role?.toLowerCase()
