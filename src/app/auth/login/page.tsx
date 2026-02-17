@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -23,7 +24,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [isLoading, setIsLoading] = React.useState(false)
@@ -57,6 +58,54 @@ export default function LoginPage() {
     }
 
     return (
+        <>
+            {isRegistered && (
+                <div className="mb-6 rounded-lg bg-green-500/10 p-3 text-sm font-medium text-green-600">
+                    Account created successfully! Please sign in.
+                </div>
+            )}
+            {error && (
+                <div className="mb-6 rounded-lg bg-destructive/10 p-3 text-sm font-medium text-destructive">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="email">Email address</Label>
+                    <Input id="email" placeholder="name@example.com" type="email" {...register("email")} className="h-11" />
+                    {errors.email && <p className="text-xs font-medium text-destructive">{errors.email.message}</p>}
+                </div>
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <Link href="#" className="text-xs text-primary hover:underline font-medium">Forgot password?</Link>
+                    </div>
+                    <Input id="password" type="password" {...register("password")} className="h-11" />
+                    {errors.password && <p className="text-xs font-medium text-destructive">{errors.password.message}</p>}
+                </div>
+                <Button type="submit" className="w-full h-11 text-base" disabled={isLoading}>
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Signing in...
+                        </>
+                    ) : "Sign In"}
+                </Button>
+            </form>
+
+            <div className="mt-6 text-center text-sm text-muted-foreground">
+                Don&apos;t have a workspace yet?{" "}
+                <Link href="/auth/register" className="font-medium text-primary hover:underline">
+                    Create an account
+                </Link>
+            </div>
+        </>
+    )
+}
+
+export default function LoginPage() {
+    return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/30 px-4 py-12">
             <div className="absolute top-8 left-8">
                 <Link href="/" className="group flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
@@ -82,47 +131,9 @@ export default function LoginPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {isRegistered && (
-                            <div className="mb-6 rounded-lg bg-green-500/10 p-3 text-sm font-medium text-green-600">
-                                Account created successfully! Please sign in.
-                            </div>
-                        )}
-                        {error && (
-                            <div className="mb-6 rounded-lg bg-destructive/10 p-3 text-sm font-medium text-destructive">
-                                {error}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email address</Label>
-                                <Input id="email" placeholder="name@example.com" type="email" {...register("email")} className="h-11" />
-                                {errors.email && <p className="text-xs font-medium text-destructive">{errors.email.message}</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Link href="#" className="text-xs text-primary hover:underline font-medium">Forgot password?</Link>
-                                </div>
-                                <Input id="password" type="password" {...register("password")} className="h-11" />
-                                {errors.password && <p className="text-xs font-medium text-destructive">{errors.password.message}</p>}
-                            </div>
-                            <Button type="submit" className="w-full h-11 text-base" disabled={isLoading}>
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Signing in...
-                                    </>
-                                ) : "Sign In"}
-                            </Button>
-                        </form>
-
-                        <div className="mt-6 text-center text-sm text-muted-foreground">
-                            Don&apos;t have a workspace yet?{" "}
-                            <Link href="/auth/register" className="font-medium text-primary hover:underline">
-                                Create an account
-                            </Link>
-                        </div>
+                        <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+                            <LoginForm />
+                        </Suspense>
                     </CardContent>
                 </Card>
             </motion.div>
