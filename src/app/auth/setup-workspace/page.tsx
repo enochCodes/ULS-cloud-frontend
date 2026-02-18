@@ -70,9 +70,10 @@ export default function SetupWorkspacePage() {
         if (hasOrganization() && role) {
             if (["admin", "owner"].includes(role)) {
                 router.push("/dashboard")
-            } else {
-                router.push("/crm")
+                return
             }
+            router.push("/crm")
+            return
         }
     }, [router])
 
