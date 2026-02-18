@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService } from "@/services/core/auth"
 import { organizationService } from "@/services/api/organization"
-import { isAuthenticated, removeToken, getUserDisplayName } from "@/lib/auth"
+import { isAuthenticated, removeToken, getUserDisplayName, getUserId } from "@/lib/auth"
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "Organization name must be at least 2 characters" }),
@@ -78,10 +78,15 @@ export default function SetupWorkspacePage() {
         setIsLoading(true)
         setError(null)
         try {
-            const res = await authService.createOrganization({
+            const userId = getUserId()
+            const payload: { name: string; subdomain: string; owner_id?: number } = {
                 name: data.name,
                 subdomain: data.subdomain,
-            })
+            }
+            if (userId !== null) {
+                payload.owner_id = userId
+            }
+            const res = await authService.createOrganization(payload)
             // Try to extract org ID from response for app update
             const orgData = res?.data as { id?: number } | undefined
             if (orgData?.id) {
