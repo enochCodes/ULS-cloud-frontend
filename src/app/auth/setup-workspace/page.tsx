@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService } from "@/services/core/auth"
+import { organizationService } from "@/services/api/organization"
 import { isAuthenticated, removeToken, getUserDisplayName } from "@/lib/auth"
 
 const formSchema = z.object({
@@ -55,6 +56,7 @@ export default function SetupWorkspacePage() {
     const [isLoading, setIsLoading] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
     const [selectedApps, setSelectedApps] = React.useState<string[]>(["crm"])
+    const [createdOrgId, setCreatedOrgId] = React.useState<number | null>(null)
 
     React.useEffect(() => {
         if (!isAuthenticated()) {
@@ -76,10 +78,15 @@ export default function SetupWorkspacePage() {
         setIsLoading(true)
         setError(null)
         try {
-            await authService.createOrganization({
+            const res = await authService.createOrganization({
                 name: data.name,
                 subdomain: data.subdomain,
             })
+            // Try to extract org ID from response for app update
+            const orgData = res?.data as { id?: number } | undefined
+            if (orgData?.id) {
+                setCreatedOrgId(orgData.id)
+            }
             // Move to app selection step
             setStep("apps")
         } catch (err) {
@@ -108,8 +115,15 @@ export default function SetupWorkspacePage() {
         )
     }
 
-    const handleFinish = () => {
-        // Organization is created with default apps by the backend
+    const handleFinish = async () => {
+        // Try to save selected apps if we have the org ID
+        if (createdOrgId && selectedApps.length > 0) {
+            try {
+                await organizationService.updateApps({ id: createdOrgId, apps: selectedApps })
+            } catch {
+                // App selection can be managed later from the marketplace
+            }
+        }
         // Remove token and redirect to login to get a fresh token with org_id and staff_role
         removeToken()
         router.push("/auth/login?registered=true")
