@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService, type CreateOrganizationPayload } from "@/services/core/auth"
 import { organizationService } from "@/services/api/organization"
-import { isAuthenticated, removeToken, getUserDisplayName, getUserId } from "@/lib/auth"
+import { isAuthenticated, removeToken, getUserDisplayName, getUserId, hasOrganization, getStaffRole } from "@/lib/auth"
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "Organization name must be at least 2 characters" }),
@@ -59,8 +59,20 @@ export default function SetupWorkspacePage() {
     const [createdOrgId, setCreatedOrgId] = React.useState<number | null>(null)
 
     React.useEffect(() => {
+        // If user is not authenticated, redirect to login
         if (!isAuthenticated()) {
             router.push("/auth/login")
+            return
+        }
+        
+        // If user is authenticated AND has both org_id and staff_role, redirect to appropriate page
+        if (hasOrganization() && getStaffRole()) {
+            const role = getStaffRole()
+            if (role && ["admin", "owner"].includes(role)) {
+                router.push("/dashboard")
+            } else {
+                router.push("/crm")
+            }
         }
     }, [router])
 
