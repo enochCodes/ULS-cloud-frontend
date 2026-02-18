@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { authService } from "@/services/core/auth"
+import { authService, type CreateOrganizationPayload } from "@/services/core/auth"
 import { organizationService } from "@/services/api/organization"
 import { isAuthenticated, removeToken, getUserDisplayName, getUserId } from "@/lib/auth"
 
@@ -79,7 +79,7 @@ export default function SetupWorkspacePage() {
         setError(null)
         try {
             const userId = getUserId()
-            const payload: { name: string; subdomain: string; owner_id?: number } = {
+            const payload: CreateOrganizationPayload = {
                 name: data.name,
                 subdomain: data.subdomain,
             }
