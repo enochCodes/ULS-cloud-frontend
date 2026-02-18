@@ -6,11 +6,15 @@ export interface JWTPayload {
     name?: string
     org_id?: number
     role?: string
+    staff_role?: StaffRole
     exp?: number
     iat?: number
 }
 
-export type UserRole = "system_admin" | "user"
+export type StaffRole = "admin" | "staff" | "manager" | "owner"
+
+/** @deprecated Use StaffRole instead */
+export type UserRole = StaffRole
 
 export function parseJWT(token: string): JWTPayload | null {
     try {
@@ -98,25 +102,33 @@ export function hasOrganization(): boolean {
     return !!payload?.org_id && payload.org_id > 0
 }
 
-export function getUserRole(): UserRole {
+export function getStaffRole(): StaffRole | null {
     const payload = getTokenPayload()
-    const role = payload?.role?.toLowerCase()
-    if (role === "system_admin") {
-        return "system_admin"
+    const staffRole = payload?.staff_role
+    if (staffRole && ["admin", "staff", "manager", "owner"].includes(staffRole)) {
+        return staffRole as StaffRole
     }
-    return "user" // Default role
+    return null
 }
 
-export function hasRole(requiredRoles: UserRole[]): boolean {
-    const userRole = getUserRole()
-    return requiredRoles.includes(userRole)
+/** @deprecated Use getStaffRole instead */
+export function getUserRole(): StaffRole {
+    return getStaffRole() || "staff"
 }
 
-export function hasMinimumRole(minimumRole: UserRole): boolean {
-    const roleHierarchy: UserRole[] = ["user", "system_admin"]
-    const userRole = getUserRole()
-    const userRoleIndex = roleHierarchy.indexOf(userRole)
-    const minimumRoleIndex = roleHierarchy.indexOf(minimumRole)
+const STAFF_ROLE_HIERARCHY: StaffRole[] = ["staff", "manager", "admin", "owner"]
+
+export function hasRole(requiredRoles: StaffRole[]): boolean {
+    const role = getStaffRole()
+    if (!role) return false
+    return requiredRoles.includes(role)
+}
+
+export function hasMinimumRole(minimumRole: StaffRole): boolean {
+    const role = getStaffRole()
+    if (!role) return false
+    const userRoleIndex = STAFF_ROLE_HIERARCHY.indexOf(role)
+    const minimumRoleIndex = STAFF_ROLE_HIERARCHY.indexOf(minimumRole)
     return userRoleIndex >= minimumRoleIndex
 }
 

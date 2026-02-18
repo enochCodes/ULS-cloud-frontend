@@ -34,7 +34,7 @@ function isSetupWorkspaceRoute(pathname: string): boolean {
     return pathname.startsWith(setupWorkspaceRoute);
 }
 
-function parseJWT(token: string): { exp?: number; role?: string; org_id?: number } | null {
+function parseJWT(token: string): { exp?: number; role?: string; staff_role?: string; org_id?: number } | null {
     try {
         const parts = token.split(".");
         if (parts.length !== 3) return null;
@@ -66,6 +66,7 @@ export default function middleware(request: NextRequest) {
     const isAuthenticated = token ? isTokenValid(token) : false;
     const payload = token ? parseJWT(token) : null;
     const hasOrg = !!(payload?.org_id && payload.org_id > 0);
+    const staffRole = payload?.staff_role || null;
     
     // If user is on a protected route but not authenticated, redirect to login
     if (isProtectedRoute(pathname) && !isAuthenticated) {
@@ -79,22 +80,59 @@ export default function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(setupWorkspaceRoute, request.url));
     }
 
+    // If authenticated user on a protected route has no staff_role, redirect to setup workspace
+    if (isProtectedRoute(pathname) && isAuthenticated && !staffRole) {
+        return NextResponse.redirect(new URL(setupWorkspaceRoute, request.url));
+    }
+
+    // Role-based route protection for authenticated users with org
+    if (isProtectedRoute(pathname) && isAuthenticated && hasOrg && staffRole) {
+        // Dashboard: only admin and owner
+        if (pathname.startsWith("/dashboard") && !["admin", "owner"].includes(staffRole)) {
+            // Redirect non-admin/owner to first app
+            return NextResponse.redirect(new URL("/crm", request.url));
+        }
+
+        // Settings: only admin and owner
+        if (pathname.startsWith("/settings") && !["admin", "owner"].includes(staffRole)) {
+            return NextResponse.redirect(new URL("/crm", request.url));
+        }
+
+        // Marketplace: manager, admin, owner
+        if (pathname.startsWith("/marketplace") && !["manager", "admin", "owner"].includes(staffRole)) {
+            return NextResponse.redirect(new URL("/crm", request.url));
+        }
+
+        // App settings routes: manager, admin, owner
+        if ((pathname.match(/^\/(crm|ticketing)\/settings/) ) && !["manager", "admin", "owner"].includes(staffRole)) {
+            // Redirect staff to app root (without settings)
+            const appRoot = "/" + pathname.split("/")[1];
+            return NextResponse.redirect(new URL(appRoot, request.url));
+        }
+    }
+
     // If user is on setup-workspace but not authenticated, redirect to login
     if (isSetupWorkspaceRoute(pathname) && !isAuthenticated) {
         return NextResponse.redirect(new URL("/auth/login", request.url));
     }
 
-    // If user is on setup-workspace but already has an org, redirect to dashboard
-    if (isSetupWorkspaceRoute(pathname) && isAuthenticated && hasOrg) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+    // If user is on setup-workspace but already has an org and staff_role, redirect to dashboard
+    if (isSetupWorkspaceRoute(pathname) && isAuthenticated && hasOrg && staffRole) {
+        if (["admin", "owner"].includes(staffRole)) {
+            return NextResponse.redirect(new URL("/dashboard", request.url));
+        }
+        return NextResponse.redirect(new URL("/crm", request.url));
     }
     
     // If user is on auth routes but already authenticated, redirect appropriately
     if (isAuthRoute(pathname) && isAuthenticated) {
-        if (!hasOrg) {
+        if (!hasOrg || !staffRole) {
             return NextResponse.redirect(new URL(setupWorkspaceRoute, request.url));
         }
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+        if (["admin", "owner"].includes(staffRole)) {
+            return NextResponse.redirect(new URL("/dashboard", request.url));
+        }
+        return NextResponse.redirect(new URL("/crm", request.url));
     }
     
     return NextResponse.next();

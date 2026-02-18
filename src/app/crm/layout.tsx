@@ -14,14 +14,14 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { hasRole } from "@/lib/auth"
 
-const crmNav = [
+const crmNavBase = [
     { name: "Dashboard", href: "/crm", icon: LayoutGrid },
     { name: "Orders", href: "/crm/orders", icon: ClipboardList },
     { name: "Customers", href: "/crm/customers", icon: Users },
     { name: "Analytics", href: "/crm/analytics", icon: BarChart3 },
     { name: "Communications", href: "/crm/communications", icon: MessageSquare },
-    { name: "Settings", href: "/crm/settings", icon: Settings },
 ]
 
 export default function CRMLayout({
@@ -30,6 +30,12 @@ export default function CRMLayout({
     children: React.ReactNode
 }) {
     const pathname = usePathname()
+    const canAccessSettings = hasRole(["manager", "admin", "owner"])
+
+    const crmNav = [
+        ...crmNavBase,
+        ...(canAccessSettings ? [{ name: "Settings", href: "/crm/settings", icon: Settings }] : []),
+    ]
 
     return (
         <div className="flex min-h-screen bg-background text-foreground selection:bg-primary/30">
