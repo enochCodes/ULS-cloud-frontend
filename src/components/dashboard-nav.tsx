@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { organizationService } from "@/services/api/organization"
+import { hasRole } from "@/lib/auth"
 
 const APP_CONFIG: Record<string, { name: string; href: string; icon: React.ElementType }> = {
     crm: { name: "Neuro CRM", href: "/crm", icon: Users },
@@ -54,21 +55,26 @@ export function DashboardNav() {
         .filter((slug) => APP_CONFIG[slug])
         .map((slug) => ({ slug, ...APP_CONFIG[slug] }))
 
+    const canAccessMarketplace = hasRole(["manager", "admin", "owner"])
+    const canAccessDashboard = hasRole(["admin", "owner"])
+
     return (
         <nav className="grid items-start gap-2">
-            <Link
-                href="/dashboard"
-                className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    pathname === "/dashboard"
-                        ? "bg-primary/10 text-primary font-bold shadow-sm"
-                        : "transparent hover:bg-accent hover:text-accent-foreground",
-                    "justify-start rounded-xl px-4 py-3"
-                )}
-            >
-                <LayoutDashboard className="mr-3 h-4 w-4" />
-                <span>Overview</span>
-            </Link>
+            {canAccessDashboard && (
+                <Link
+                    href="/dashboard"
+                    className={cn(
+                        buttonVariants({ variant: "ghost" }),
+                        pathname === "/dashboard"
+                            ? "bg-primary/10 text-primary font-bold shadow-sm"
+                            : "transparent hover:bg-accent hover:text-accent-foreground",
+                        "justify-start rounded-xl px-4 py-3"
+                    )}
+                >
+                    <LayoutDashboard className="mr-3 h-4 w-4" />
+                    <span>Overview</span>
+                </Link>
+            )}
 
             {activeApps.map((app) => {
                 const Icon = app.icon
@@ -91,19 +97,21 @@ export function DashboardNav() {
                 )
             })}
 
-            <Link
-                href="/marketplace"
-                className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    pathname.startsWith("/marketplace")
-                        ? "bg-primary/10 text-primary font-bold shadow-sm"
-                        : "transparent hover:bg-accent hover:text-accent-foreground",
-                    "justify-start rounded-xl px-4 py-3"
-                )}
-            >
-                <Package className="mr-3 h-4 w-4" />
-                <span>App Marketplace</span>
-            </Link>
+            {canAccessMarketplace && (
+                <Link
+                    href="/marketplace"
+                    className={cn(
+                        buttonVariants({ variant: "ghost" }),
+                        pathname.startsWith("/marketplace")
+                            ? "bg-primary/10 text-primary font-bold shadow-sm"
+                            : "transparent hover:bg-accent hover:text-accent-foreground",
+                        "justify-start rounded-xl px-4 py-3"
+                    )}
+                >
+                    <Package className="mr-3 h-4 w-4" />
+                    <span>App Marketplace</span>
+                </Link>
+            )}
         </nav>
     )
 }

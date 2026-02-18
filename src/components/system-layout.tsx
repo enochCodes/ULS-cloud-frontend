@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { getUserDisplayName, getUserEmail, getUserInitials, getUserRole, hasMinimumRole, logout, UserRole } from "@/lib/auth"
+import { getUserDisplayName, getUserEmail, getUserInitials, getUserRole, hasRole, logout, StaffRole } from "@/lib/auth"
 import {
   LayoutGrid,
   Package,
@@ -21,10 +21,10 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Badge } from "@/components/ui/badge"
 import { organizationService, Organization } from "@/services/api/organization"
 
-const APP_SLUG_MAP: Record<string, { name: string; href: string; icon: React.ElementType; minRole?: UserRole }> = {
+const APP_SLUG_MAP: Record<string, { name: string; href: string; icon: React.ElementType; allowedRoles?: StaffRole[] }> = {
   crm: { name: "Neuro CRM", href: "/crm", icon: Users },
   ticketing: { name: "Quantum Support", href: "/ticketing", icon: MessageSquare },
-  marketplace: { name: "App Marketplace", href: "/marketplace", icon: Package },
+  marketplace: { name: "App Marketplace", href: "/marketplace", icon: Package, allowedRoles: ["manager", "admin", "owner"] },
 }
 
 interface SystemLayoutProps {
@@ -37,7 +37,7 @@ export function SystemLayout({ children }: SystemLayoutProps) {
   const [userName, setUserName] = React.useState("Admin User")
   const [userEmail, setUserEmail] = React.useState("admin@uls.cloud")
   const [userInitials, setUserInitials] = React.useState("A")
-  const [userRole, setUserRole] = React.useState<UserRole>("user")
+  const [userRole, setUserRole] = React.useState<StaffRole>("staff")
 
   React.useEffect(() => {
     setUserName(getUserDisplayName())
@@ -65,12 +65,14 @@ export function SystemLayout({ children }: SystemLayoutProps) {
   // Build navigation items with role-based filtering
   const allItems = [
     ...appItems,
-    { name: "App Marketplace", href: "/marketplace", icon: Package, minRole: undefined as UserRole | undefined },
-    { name: "Admin Control", href: "/settings", icon: Settings, minRole: "system_admin" as UserRole | undefined },
-  ].filter(item => !item.minRole || hasMinimumRole(item.minRole))
+    { name: "App Marketplace", href: "/marketplace", icon: Package, allowedRoles: ["manager", "admin", "owner"] as StaffRole[] | undefined },
+    { name: "Admin Control", href: "/settings", icon: Settings, allowedRoles: ["admin", "owner"] as StaffRole[] | undefined },
+  ].filter(item => !item.allowedRoles || hasRole(item.allowedRoles))
+
+  const showDashboard = hasRole(["admin", "owner"])
 
   const sidebarGroups = [
-    { title: "Main Hub", items: [{ name: "Overview", href: "/dashboard", icon: LayoutGrid }] },
+    ...(showDashboard ? [{ title: "Main Hub", items: [{ name: "Overview", href: "/dashboard", icon: LayoutGrid }] }] : []),
     { title: "Apps", items: allItems },
   ]
 

@@ -2,18 +2,19 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { isAuthenticated, hasMinimumRole, getUserRole, UserRole } from "@/lib/auth"
+import { isAuthenticated, hasMinimumRole, hasRole, getStaffRole, StaffRole } from "@/lib/auth"
 import { Loader2, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 interface AuthGuardProps {
     children: React.ReactNode
-    requiredRole?: UserRole
+    requiredRole?: StaffRole
+    allowedRoles?: StaffRole[]
     fallback?: React.ReactNode
 }
 
-export function AuthGuard({ children, requiredRole, fallback }: AuthGuardProps) {
+export function AuthGuard({ children, requiredRole, allowedRoles, fallback }: AuthGuardProps) {
     const router = useRouter()
     const pathname = usePathname()
     const [isLoading, setIsLoading] = useState(true)
@@ -23,6 +24,12 @@ export function AuthGuard({ children, requiredRole, fallback }: AuthGuardProps) 
         const checkAuth = () => {
             if (!isAuthenticated()) {
                 router.push(`/auth/login?from=${encodeURIComponent(pathname)}`)
+                return
+            }
+
+            if (allowedRoles && !hasRole(allowedRoles)) {
+                setHasAccess(false)
+                setIsLoading(false)
                 return
             }
 
@@ -37,7 +44,7 @@ export function AuthGuard({ children, requiredRole, fallback }: AuthGuardProps) 
         }
 
         checkAuth()
-    }, [pathname, router, requiredRole])
+    }, [pathname, router, requiredRole, allowedRoles])
 
     if (isLoading) {
         return (
@@ -65,11 +72,11 @@ export function AuthGuard({ children, requiredRole, fallback }: AuthGuardProps) 
                         <h1 className="text-2xl font-bold">Access Denied</h1>
                         <p className="text-muted-foreground">
                             You don&apos;t have permission to access this page. 
-                            {requiredRole && (
+                            {(requiredRole || allowedRoles) && (
                                 <span className="block mt-1">
-                                    Required role: <span className="font-semibold capitalize">{requiredRole}</span>
+                                    Required role: <span className="font-semibold capitalize">{allowedRoles ? allowedRoles.join(", ") : requiredRole}</span>
                                     <br />
-                                    Your role: <span className="font-semibold capitalize">{getUserRole()}</span>
+                                    Your role: <span className="font-semibold capitalize">{getStaffRole() || "none"}</span>
                                 </span>
                             )}
                         </p>
@@ -93,7 +100,7 @@ export function AuthGuard({ children, requiredRole, fallback }: AuthGuardProps) 
 // Higher-order component for wrapping pages with auth
 export function withAuth<P extends object>(
     Component: React.ComponentType<P>,
-    requiredRole?: UserRole
+    requiredRole?: StaffRole
 ) {
     return function WrappedComponent(props: P) {
         return (

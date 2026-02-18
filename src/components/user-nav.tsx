@@ -18,7 +18,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { getUserDisplayName, getUserEmail, getUserInitials, getUserRole, logout } from "@/lib/auth"
+import { getUserDisplayName, getUserEmail, getUserInitials, getStaffRole, logout } from "@/lib/auth"
 
 export function UserNav() {
     const [name, setName] = useState("User")
@@ -30,7 +30,7 @@ export function UserNav() {
         setName(getUserDisplayName())
         setEmail(getUserEmail())
         setInitials(getUserInitials())
-        setRole(getUserRole())
+        setRole(getStaffRole() || "staff")
     }, [])
 
     return (
