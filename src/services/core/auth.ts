@@ -17,6 +17,7 @@ export interface CreateOrganizationPayload {
     name: string
     address?: string
     subdomain: string
+    owner_id?: number
 }
 
 interface SSOResponse<T = unknown> {

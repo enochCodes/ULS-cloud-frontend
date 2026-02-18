@@ -154,6 +154,13 @@ export function getUserInitials(): string {
     return name.substring(0, 2).toUpperCase()
 }
 
+export function getUserId(): number | null {
+    const payload = getTokenPayload()
+    if (!payload?.sub) return null
+    const userId = parseInt(payload.sub, 10)
+    return isNaN(userId) ? null : userId
+}
+
 export function logout() {
     removeToken()
     window.location.href = "/auth/login"
