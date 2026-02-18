@@ -66,9 +66,9 @@ export default function SetupWorkspacePage() {
         }
         
         // If user is authenticated AND has both org_id and staff_role, redirect to appropriate page
-        if (hasOrganization() && getStaffRole()) {
-            const role = getStaffRole()
-            if (role && ["admin", "owner"].includes(role)) {
+        const role = getStaffRole()
+        if (hasOrganization() && role) {
+            if (["admin", "owner"].includes(role)) {
                 router.push("/dashboard")
             } else {
                 router.push("/crm")
