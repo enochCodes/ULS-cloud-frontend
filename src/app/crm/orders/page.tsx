@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ClipboardList, Plus, RefreshCw, ArrowLeft, CheckCircle2, Trash2, X, Eye, Loader2 } from "lucide-react"
 
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -109,7 +110,13 @@ export default function OrdersPage() {
             setForm((p) => ({ ...p, notes: "", deadline_at: "", custom_fields: {} }))
         } catch (err) {
             console.error(err)
-            setError("Failed to create order. Please check your connection and try again.")
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message || "Failed to create order. Please try again.")
+            } else if (err instanceof Error) {
+                setError(err.message || "Failed to create order. Please try again.")
+            } else {
+                setError("Failed to create order. Please try again.")
+            }
         } finally {
             setIsLoading(false)
         }
@@ -161,7 +168,7 @@ export default function OrdersPage() {
                 <div className="flex gap-2">
                     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                         <SheetTrigger asChild>
-                            <Button variant="outline" disabled={isLoading || !customers.length}>
+                            <Button variant="outline" disabled={isLoading}>
                                 <Plus className="h-4 w-4 mr-2" /> New order
                             </Button>
                         </SheetTrigger>
@@ -171,13 +178,20 @@ export default function OrdersPage() {
                                 <SheetDescription>Enter order details below to create a new order.</SheetDescription>
                             </SheetHeader>
                             <div className="space-y-4 mt-4">
+                                {!customers.length && (
+                                    <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                                        No customers found. Please <a href="/crm/customers" className="underline">add a customer</a> first before creating an order.
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Customer</label>
                                     <select
-                                        className="w-full rounded-md border px-3 py-2 bg-background"
+                                        className="w-full rounded-md border px-3 py-2 bg-background disabled:opacity-50"
                                         value={form.customer_id}
+                                        disabled={!customers.length}
                                         onChange={(e) => setForm((p) => ({ ...p, customer_id: Number(e.target.value) }))}
                                     >
+                                        {customers.length === 0 && <option value="">— No customers —</option>}
                                         {customers.map((c) => (
                                             <option key={c.id} value={c.id}>{c.full_name}</option>
                                         ))}
@@ -281,11 +295,15 @@ export default function OrdersPage() {
                                         </div>
                                     </div>
                                 )}
-                                {error && <p className="text-xs text-destructive">{error}</p>}
+                                {error && (
+                                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium">
+                                        {error}
+                                    </div>
+                                )}
                             </div>
                             <SheetFooter className="mt-4 flex gap-2">
-                                <Button onClick={handleCreateOrder} disabled={isLoading || !form.customer_id}>
-                                    {isLoading ? "Creating..." : "Create order"}
+                                <Button onClick={handleCreateOrder} disabled={isLoading || !customers.length || !form.customer_id}>
+                                    {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creating…</> : "Create order"}
                                 </Button>
                                 <Button variant="ghost" onClick={() => setIsSheetOpen(false)}>
                                     <X className="h-4 w-4 mr-1" /> Cancel

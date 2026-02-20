@@ -1,14 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import axios from "axios"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Plus, Send, RefreshCw, Smartphone, X } from "lucide-react"
+import { Mail, Plus, Send, RefreshCw, Smartphone, X, Loader2 } from "lucide-react"
 import { crmCommunications, crmCustomers, Customer, Message, MessageChannel, MessageTemplate } from "@/services/api/crm"
+
+function getApiErrorMessage(err: unknown, fallback: string): string {
+    if (axios.isAxiosError(err)) return err.response?.data?.message || err.message || fallback
+    if (err instanceof Error) return err.message || fallback
+    return fallback
+}
 
 export default function CommunicationsPage() {
     const [activeTab, setActiveTab] = useState("messages")
@@ -16,6 +23,8 @@ export default function CommunicationsPage() {
     const [templates, setTemplates] = useState<MessageTemplate[]>([])
     const [customers, setCustomers] = useState<Customer[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [sendError, setSendError] = useState<string | null>(null)
+    const [templateError, setTemplateError] = useState<string | null>(null)
 
     // Send Message Form State
     const [isSendOpen, setIsSendOpen] = useState(false)
@@ -58,6 +67,7 @@ export default function CommunicationsPage() {
     const handleSendMessage = async () => {
         if (!sendForm.customer_id || !sendForm.content) return
         setIsLoading(true)
+        setSendError(null)
         try {
             const customer = customers.find(c => c.id === Number(sendForm.customer_id))
             await crmCommunications.sendMessage({
@@ -72,8 +82,9 @@ export default function CommunicationsPage() {
             setIsSendOpen(false)
             setSendForm({ customer_id: "", channel: "email", template_id: "", subject: "", content: "" })
             loadData()
-        } catch (error) {
-            console.error("Failed to send message", error)
+        } catch (err) {
+            console.error("Failed to send message", err)
+            setSendError(getApiErrorMessage(err, "Failed to send message. Please try again."))
         } finally {
             setIsLoading(false)
         }
@@ -82,6 +93,7 @@ export default function CommunicationsPage() {
     const handleCreateTemplate = async () => {
         if (!templateForm.name || !templateForm.content) return
         setIsLoading(true)
+        setTemplateError(null)
         try {
             await crmCommunications.createTemplate({
                 name: templateForm.name,
@@ -92,8 +104,9 @@ export default function CommunicationsPage() {
             setIsTemplateOpen(false)
             setTemplateForm({ name: "", subject: "", content: "" })
             loadData()
-        } catch (error) {
-            console.error("Failed to create template", error)
+        } catch (err) {
+            console.error("Failed to create template", err)
+            setTemplateError(getApiErrorMessage(err, "Failed to save template. Please try again."))
         } finally {
             setIsLoading(false)
         }
@@ -215,9 +228,14 @@ export default function CommunicationsPage() {
                                         />
                                     </div>
                                 </div>
+                                {sendError && (
+                                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium mb-2">
+                                        {sendError}
+                                    </div>
+                                )}
                                 <SheetFooter className="gap-2">
                                     <Button onClick={handleSendMessage} disabled={isLoading || !sendForm.customer_id || !sendForm.content}>
-                                        {isLoading ? "Sending..." : "Send Message"}
+                                        {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending…</> : "Send Message"}
                                     </Button>
                                     <Button variant="ghost" onClick={() => setIsSendOpen(false)}>
                                         <X className="h-4 w-4 mr-1" /> Cancel
@@ -313,9 +331,14 @@ export default function CommunicationsPage() {
                                         <p className="text-xs text-muted-foreground">Use placeholders like [Customer Name] to personalize your message.</p>
                                     </div>
                                 </div>
+                                {templateError && (
+                                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium mb-2">
+                                        {templateError}
+                                    </div>
+                                )}
                                 <SheetFooter className="gap-2">
                                     <Button onClick={handleCreateTemplate} disabled={isLoading || !templateForm.name || !templateForm.content}>
-                                        {isLoading ? "Saving..." : "Save Template"}
+                                        {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : "Save Template"}
                                     </Button>
                                     <Button variant="ghost" onClick={() => setIsTemplateOpen(false)}>
                                         <X className="h-4 w-4 mr-1" /> Cancel
