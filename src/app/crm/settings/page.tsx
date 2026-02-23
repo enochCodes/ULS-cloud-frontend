@@ -20,8 +20,9 @@ function parseSchema(s: string | CustomOrderFieldSchema[] | undefined): CustomOr
     if (!s) return defaultFields
     if (Array.isArray(s)) return s
     try {
-        const parsed = JSON.parse(s) as CustomOrderFieldSchema[]
-        return Array.isArray(parsed) ? parsed : defaultFields
+        const parsed = JSON.parse(s) as { fields?: CustomOrderFieldSchema[] } | CustomOrderFieldSchema[]
+        if (Array.isArray(parsed)) return parsed
+        return parsed.fields || defaultFields
     } catch {
         return defaultFields
     }
@@ -50,7 +51,7 @@ export default function SettingsPage() {
         setIsSaving(true)
         try {
             await crmSettings.update({
-                custom_order_fields_schema: JSON.stringify(customFields),
+                custom_order_fields_schema: JSON.stringify({ fields: customFields }),
             })
         } catch (e) {
             console.error(e)
