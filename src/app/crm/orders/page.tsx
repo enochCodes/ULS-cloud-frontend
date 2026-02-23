@@ -37,6 +37,18 @@ function parseCustomFieldsData(data: string | undefined): Record<string, string>
     }
 }
 
+function parseSchema(s: string | CustomOrderFieldSchema[] | undefined): CustomOrderFieldSchema[] {
+    if (!s) return []
+    if (Array.isArray(s)) return s
+    try {
+        const parsed = JSON.parse(s) as { fields?: CustomOrderFieldSchema[] } | CustomOrderFieldSchema[]
+        if (Array.isArray(parsed)) return parsed
+        return parsed.fields || []
+    } catch {
+        return []
+    }
+}
+
 export default function OrdersPage() {
     const [customers, setCustomers] = useState<Customer[]>([])
     const [orders, setOrders] = useState<Order[]>([])
@@ -54,17 +66,6 @@ export default function OrdersPage() {
     })
     const [error, setError] = useState<string | null>(null)
     const [customFieldsSchema, setCustomFieldsSchema] = useState<CustomOrderFieldSchema[]>([])
-
-    function parseSchema(s: string | CustomOrderFieldSchema[] | undefined): CustomOrderFieldSchema[] {
-        if (!s) return []
-        if (Array.isArray(s)) return s
-        try {
-            const parsed = JSON.parse(s) as CustomOrderFieldSchema[]
-            return Array.isArray(parsed) ? parsed : []
-        } catch {
-            return []
-        }
-    }
 
     useEffect(() => {
         const load = async () => {
@@ -103,7 +104,7 @@ export default function OrdersPage() {
                 notes: form.notes,
                 deadline_at: form.deadline_at,
                 items: [],
-                required_fields_data: Object.keys(form.custom_fields).length > 0 ? JSON.stringify(form.custom_fields) : undefined
+                custom_fields: Object.keys(form.custom_fields).length > 0 ? form.custom_fields : undefined
             })
             setOrders((prev) => [created, ...prev])
             setIsSheetOpen(false)
@@ -431,6 +432,11 @@ function OrderDetailsSheet({
     const customData = order ? parseCustomFieldsData(order.required_fields_data) : {}
     const qty = order ? getOrderQuantity(order) : 0
 
+    // Use the order's own embedded schema if available, fall back to org-level schema
+    const orderSchemaFields = order?.required_fields_schema
+        ? parseSchema(order.required_fields_schema) || customFieldsSchema
+        : customFieldsSchema
+
     return (
         <Sheet open={!!order} onOpenChange={(open) => !open && onClose()}>
             <SheetContent className="sm:max-w-lg overflow-auto">
@@ -492,11 +498,11 @@ function OrderDetailsSheet({
                             </div>
                         </div>
                     ) : null}
-                    {customFieldsSchema.length > 0 && Object.keys(customData).length > 0 && (
+                    {orderSchemaFields.length > 0 && Object.keys(customData).length > 0 && (
                         <div>
                             <p className="text-xs text-muted-foreground mb-2">Custom Fields</p>
                             <div className="border rounded divide-y">
-                                {customFieldsSchema.map((f) =>
+                                {orderSchemaFields.map((f) =>
                                     customData[f.id] != null ? (
                                         <div key={f.id} className="flex justify-between px-4 py-2 text-sm">
                                             <span className="text-muted-foreground">{f.label}</span>
