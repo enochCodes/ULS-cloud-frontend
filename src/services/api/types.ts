@@ -132,7 +132,19 @@ export interface PaginatedParams {
 }
 
 // Payload helpers
-export type CreateCustomerPayload = Omit<Customer, "id" | "created_at" | "updated_at" | "created_by" | "updated_by" | "org_id">
+export interface CreateCustomerPayload {
+    full_name: string
+    phone: string
+    email: string
+    address?: string
+    tags: string
+    source: string
+    status: CustomerStatus
+    can_email: boolean
+    can_sms: boolean
+    consent_timestamp: string | null
+    consent_source: string
+}
 export type CreateOrderPayload = Partial<Order> & { customer_id?: number; custom_fields?: Record<string, string> }
 export type UpdateOrderStatusPayload = { status: OrderStatus }
 export type SendMessagePayload = Omit<Message, "id" | "org_id" | "status" | "created_at" | "queued_at" | "sent_at" | "delivered_at" | "failed_at"> & {
