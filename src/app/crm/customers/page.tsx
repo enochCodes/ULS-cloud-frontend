@@ -56,11 +56,16 @@ export default function CustomersPage() {
         try {
             const created = await crmCustomers.create({
                 full_name: newCustomer.full_name,
-                emails: newCustomer.email ? [newCustomer.email] : [],
-                phones: newCustomer.phone ? [newCustomer.phone] : [],
+                phone: newCustomer.phone,
+                email: newCustomer.email,
                 address: newCustomer.address,
-                tags: newCustomer.tags ? newCustomer.tags.split(",").map(t => t.trim()) : [],
+                tags: newCustomer.tags,
+                source: "",
                 status: newCustomer.status,
+                can_email: false,
+                can_sms: false,
+                consent_timestamp: null,
+                consent_source: "",
             })
             setCustomers((prev) => [created, ...prev])
             setNewCustomer({ full_name: "", email: "", phone: "", address: "", tags: "", status: "lead" })
